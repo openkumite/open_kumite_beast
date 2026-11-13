@@ -1,0 +1,118 @@
+# CI for open_kumite_beast: checks only, no release builds. There is no game data here, so the tests that need a
+# converted install or a disc image skip themselves.
+#
+# The three converter crates are private git dependencies (Cargo.toml, fetched over SSH with the git command line:
+# .cargo/config.toml). Each converter repository has a read-only deploy key; its private half is a secret of this
+# repository (OK_<CRATE>_DEPLOY_KEY), and the key's comment names the repository so the ssh-agent step routes each
+# fetch to its key.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  linux:
+    name: Linux (fmt, clippy, tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
+        with:
+          ssh-private-key: |
+            ${{ secrets.OK_BR2_CONVERTER_DEPLOY_KEY }}
+            ${{ secrets.OK_BR1_CONVERTER_DEPLOY_KEY }}
+            ${{ secrets.OK_Q3_CONVERTER_DEPLOY_KEY }}
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev pkg-config
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo fmt --check
+      - run: cargo clippy --release --locked --all-targets -- -D warnings
+      - run: cargo clippy --release --locked --all-targets --no-default-features -- -D warnings
+      - run: cargo test --release --locked
+        env:
+          OKB_SAVE_DIR: ${{ runner.temp }}/okb_save
+
+  web:
+    name: Web (wasm32, trunk)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
+        with:
+          ssh-private-key: |
+            ${{ secrets.OK_BR2_CONVERTER_DEPLOY_KEY }}
+            ${{ secrets.OK_BR1_CONVERTER_DEPLOY_KEY }}
+            ${{ secrets.OK_Q3_CONVERTER_DEPLOY_KEY }}
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+          components: clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: trunk@0.20.2
+      - run: cargo clippy --release --locked --target wasm32-unknown-unknown --lib -- -D warnings
+      - run: cargo clippy --release --locked --target wasm32-unknown-unknown --features netplay-webrtc --lib --bins -- -D warnings
+      - run: trunk build --release --public-url ./
+
+  deps:
+    name: Dependencies (deny, audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
+        with:
+          ssh-private-key: |
+            ${{ secrets.OK_BR2_CONVERTER_DEPLOY_KEY }}
+            ${{ secrets.OK_BR1_CONVERTER_DEPLOY_KEY }}
+            ${{ secrets.OK_Q3_CONVERTER_DEPLOY_KEY }}
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-deny,cargo-audit
+      - run: cargo deny --locked check
+      - run: cargo audit
+
+  desktop:
+    name: ${{ matrix.os }} (build, tests)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
+        with:
+          ssh-private-key: |
+            ${{ secrets.OK_BR2_CONVERTER_DEPLOY_KEY }}
+            ${{ secrets.OK_BR1_CONVERTER_DEPLOY_KEY }}
+            ${{ secrets.OK_Q3_CONVERTER_DEPLOY_KEY }}
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo build --release --locked --bins
+      - run: cargo test --release --locked
+        env:
+          OKB_SAVE_DIR: ${{ runner.temp }}/okb_save

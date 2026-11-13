@@ -244,7 +244,8 @@ mod tests {
         for d in ["a/export", "b/c/conv", "b/c/d/deep", "data"] {
             std::fs::write(base.join(d).join("manifest.json"), "{}").unwrap();
         }
-        let base = base.canonicalize().unwrap();
+        // the scan returns paths without Windows' verbatim prefix, so the expected ones must not have it either
+        let base = super::plain(base.canonicalize().unwrap());
         let over = base.to_string_lossy().to_string();
         for f in ["a/disc.cue", "a/disc.bin", "a/other.bin", "b/c/game.chd", "a/notes.txt"] {
             std::fs::write(base.join(f), "x").unwrap();

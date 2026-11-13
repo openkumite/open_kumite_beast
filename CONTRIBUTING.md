@@ -22,8 +22,8 @@ work. Read [`ARCHITECTURE.md`](ARCHITECTURE.md) first for the layout. Paths are 
   repositories in the GitHub organisation `openkumite`, git dependencies on a release tag (`tag = "vX.Y.Z"` in
   `Cargo.toml`, the commit pinned in `Cargo.lock`). Cargo fetches them over SSH with the git command line
   (`.cargo/config.toml`: `net.git-fetch-with-cli`), so an SSH key with access to the organisation must be loaded
-  (`ssh -T git@github.com` answers with your login); a CI needs a deploy key or a token. Cargo reads their manifests
-  for every build, also `--no-default-features`, and the fuzz crate needs them too. A converter change reaches the
+  (`ssh -T git@github.com` answers with your login); the CI uses read-only deploy keys
+  (`.github/workflows/ci.yml`). Cargo reads their manifests for every build, also `--no-default-features`, and the fuzz crate needs them too. A converter change reaches the
   engine only through GitHub: push and tag the converter (`git tag -s vX.Y.Z`), raise the `tag` and `version` of all
   its entries in `Cargo.toml` (desktop and wasm32), then `cargo update -p <crate>`.
 - The tooling tree beside the repo, outside git: `../.research/` (the golden baseline and the determinism scripts).
@@ -97,6 +97,13 @@ Scripted runs, screenshots and every debug switch: [`docs/debug_hooks.md`](docs/
 [`docs/gamepads.md`](docs/gamepads.md).
 
 ## Checks
+
+GitHub Actions (`.github/workflows/ci.yml`, on pushes to `main`, pull requests and by hand) runs fmt, clippy (default
+and `--no-default-features`) and the tests on Linux; the wasm32 clippy (with and without `netplay-webrtc`) and a
+`trunk build`; `cargo deny` and `cargo audit`; and a build plus the tests on macOS and Windows. It has no game data,
+so the tests that need it skip themselves: run them locally. It reaches the private converter repositories through a
+read-only deploy key on each, whose private half is the secret `OK_<CRATE>_DEPLOY_KEY` (e.g.
+`OK_BR2_CONVERTER_DEPLOY_KEY`); a new converter needs a key and a secret too.
 
 `unsafe` is denied crate-wide (`[lints.rust] unsafe_code = "deny"` in `Cargo.toml`). The only allowed sites are the
 platform boundary (`platform/android.rs`, the FFI in `platform/support.rs`, the Android entry in `lib.rs`) and the
