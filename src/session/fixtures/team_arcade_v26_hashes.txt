@@ -1,0 +1,38 @@
+arcade_lose_continue 500 23aa8e1589a8bd9c
+arcade_lose_continue 1000 32aed447d8e0939c
+arcade_lose_continue 1500 319f22962e073ae2
+arcade_lose_continue 2000 518c54c086194066
+arcade_lose_continue 2500 7df58717b83c4977
+arcade_lose_continue 3000 1226d33ca3e543dd
+arcade_lose_continue 3500 08635bcbb8b2887b
+arcade_lose_continue 4000 724d0728d02d450e
+arcade_lose_continue 4500 ccde2c69c4ae3627
+arcade_lose_continue 5000 8a7664e6ed1be1e3
+arcade_lose_continue 5500 0a9364ccd31057df
+arcade_lose_continue 6000 c3616605e4003ba3
+arcade_lose_continue 6301 1feb6de6928e74cd Some(Continue)
+arcade_win 500 658a1688143b37f6
+arcade_win 1000 3d71248a07b51644
+arcade_win 1500 5b86bd4203c86064
+arcade_win 2000 c5fca5edafea062c
+arcade_win 2500 ccd5f93b9c442768
+arcade_win 3000 c902bf5b390cae10
+arcade_win 3500 c8cbffddf0eaf522
+arcade_win 4000 9ef21e57ec92db7d
+arcade_win 4500 fad7cf524bdaf4fd
+arcade_win 4739 ee4093621d7c26ca Some(Winner(0))
+arcade_game_over 500 23aa8e1589a8bd9c
+arcade_game_over 1000 32aed447d8e0939c
+arcade_game_over 1500 319f22962e073ae2
+arcade_game_over 2000 518c54c086194066
+arcade_game_over 2500 7df58717b83c4977
+arcade_game_over 3000 1226d33ca3e543dd
+arcade_game_over 3500 08635bcbb8b2887b
+arcade_game_over 4000 724d0728d02d450e
+arcade_game_over 4500 ccde2c69c4ae3627
+arcade_game_over 5000 8a7664e6ed1be1e3
+arcade_game_over 5500 0a9364ccd31057df
+arcade_game_over 6000 c3616605e4003ba3
+arcade_game_over 6500 919efe8a4d71b7d2
+arcade_game_over 7000 e087f007a557c929
+arcade_game_over 7091 8cbeccaed8e60b73 Some(GameOver)

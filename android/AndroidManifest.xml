@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Android app of OpenKumiteBeast (docs/android.md). One permission, INTERNET, for the NETWORK menu's
+     netplay (a room's signaling server and the peer, or direct IP); the game data comes through the system folder
+     picker (Storage Access Framework), the saves stay in the app's own storage. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.openkumitebeast.game"
+    android:versionCode="1"
+    android:versionName="0.1.0">
+
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.gamepad" android:required="false" />
+
+    <application
+        android:label="OpenKumiteBeast"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:hasCode="true"
+        android:extractNativeLibs="true"
+        android:allowBackup="false"
+        android:isGame="true"
+        android:appCategory="game">
+        <activity
+            android:name=".OkbActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density|locale|layoutDirection|fontScale|colorMode|touchscreen|mcc|mnc|fontWeightAdjustment|grammaticalGender"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen">
+            <meta-data android:name="android.app.lib_name" android:value="open_kumite_beast" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

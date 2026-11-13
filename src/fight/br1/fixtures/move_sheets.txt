@@ -1,0 +1,14 @@
+# code state startup active damage stun   (sheet_fixture.py from .research/br1/moves/*.json)
+MIT 128 10 2 12 240
+MIT 131 10 1 8 240
+MIT 144 12 2 17 240
+MIT 201 22 3 30 240
+MIT 286 15 5 20 240
+FOX 128 7 2 7 240
+FOX 144 10 1 16 240
+FOX 147 10 2 12 240
+URI 131 8 2 7 240
+URI 149 12 1 18 240
+URI 150 14 5 0 240
+URI 272 14 2 10 240
+URI 276 9 1 11 240

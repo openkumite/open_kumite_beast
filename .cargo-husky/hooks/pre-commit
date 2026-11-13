@@ -1,0 +1,6 @@
+#!/bin/sh
+# cargo-husky (installed into .git/hooks by `cargo test`): format and lint before every commit
+set -e
+export PATH="$HOME/.cargo/bin:$PATH"
+cargo fmt --check
+cargo clippy --release --all-targets --quiet -- -D warnings

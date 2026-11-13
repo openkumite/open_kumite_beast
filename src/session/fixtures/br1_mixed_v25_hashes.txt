@@ -1,0 +1,13 @@
+br1_mixed_jen_mit_v25 500 46b236c9a4788c56
+br1_mixed_jen_mit_v25 1000 64ba00df2b5a37a6
+br1_mixed_jen_mit_v25 1500 96b731e5a369e22f
+br1_mixed_jen_mit_v25 2000 d27e93930e417c32
+br1_mixed_jen_mit_v25 2500 d17801b40d1a213e
+br1_mixed_jen_mit_v25 3000 8d88a8da29ba23dd
+br1_mixed_jen_mit_v25 3500 900b07bf70a79db7
+br1_mixed_jen_mit_v25 4000 74f3b9c7daf75d2e
+br1_mixed_jen_mit_v25 4500 5c759a0279205b9e
+br1_mixed_jen_mit_v25 5000 a14d4f3e689a4112
+br1_mixed_jen_mit_v25 5500 08f9fcb570530ce6
+br1_mixed_jen_mit_v25 6000 90fdab75e94c5d12
+br1_mixed_jen_mit_v25 6000 90fdab75e94c5d12 end

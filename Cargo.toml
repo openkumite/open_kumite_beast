@@ -1,0 +1,105 @@
+[package]
+name = "open_kumite_beast"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+bytemuck = { version = "1.25.2", features = ["derive"] }
+cpal = "0.15"
+# pinned (`=`): the logic's f64 skeleton (`portable`) from simulation version 3 runs on it; a bump that changes
+# any of its results needs a SIM_VERSION bump (`session::tests::v3_skeleton_bits` fails first)
+glam = { version = "=0.30.10", features = ["bytemuck", "serde"] }
+gltf = { version = "1.4.1", default-features = false, features = ["utils", "names", "KHR_materials_unlit", "KHR_materials_variants"] }
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+# the logic's sin / cos / atan2 (`portable`): pure Rust, the same bits on every target (std's are the platform's libm);
+# pinned (`=`) like glam: another libm may round differently, which needs a SIM_VERSION bump
+libm = "=0.2.16"
+log = "0.4.34"
+pollster = "1.0.1"
+# save-state files: self-describing CBOR, so later builds read older files (new fields take their defaults)
+ciborium = { version = "0.2.2", default-features = false, features = ["std"] }
+# runtime snapshots: serde format with varint lengths (the same bytes on 32- and 64-bit targets)
+postcard = { version = "1.1.3", default-features = false, features = ["alloc"] }
+serde = { version = "1.0.229", features = ["derive", "rc"] }
+serde_json = "1.0.151"
+symphonia = { version = "0.5", default-features = false, features = ["mp3"] }
+wgpu = "30.0.1"
+winit = "0.30.13"
+# netplay over WebRTC (`net::webrtc`, feature `netplay-webrtc`; on in the web build): pinned (`=`) to the protocol of
+# the `matchbox_server` the rooms are signalled through (the same 0.15 release)
+matchbox_socket = { version = "=0.15.0", optional = true }
+
+[features]
+# the setup screen's CONVERT DISC IMAGE: the in-app converters (`ok_br2_converter`, `ok_br1_converter`,
+# `ok_q3_converter`, the project's own crates, git dependencies on their tagged GitHub releases); off = only "use converted game data"
+default = ["converter"]
+converter = ["dep:ok_br2_converter", "dep:ok_br1_converter", "dep:ok_q3_converter"]
+# netplay rooms over WebRTC data channels through a matchbox signaling server (`--signal URL --room CODE`,
+# `?signal=…&room=…`); the browser build (Trunk) has it on, the desktop build when asked for
+netplay-webrtc = ["dep:matchbox_socket"]
+
+[lints.rust]
+# no `unsafe` outside the platform boundary: each allowed site carries `#[allow(unsafe_code)]` and a SAFETY note
+# (the Android/macOS FFI in platform/, the Android entry points, the test tools' start-up env var)
+unsafe_code = "deny"
+
+[lints.clippy]
+# the port indexes several parallel arrays like the original's loops, and keeps its routines' argument lists
+needless_range_loop = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+
+[dev-dependencies]
+# git hooks from .cargo-husky/hooks (fmt + clippy on commit; tests, cargo-deny, cargo-audit on push)
+cargo-husky = { version = "1", default-features = false, features = ["user-hooks"] }
+# writes the synthetic .pk3 of the Quake III import's test (`app::setup::imports`); the version `ok_q3_converter` reads
+zip = { version = "9", default-features = false, features = ["deflate"] }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "okbeast"
+path = "src/main.rs"
+
+# the browser's conversion worker (`app::setup::worker`; Trunk `data-type="worker"`)
+[[bin]]
+name = "convert_worker"
+path = "src/bin/convert_worker.rs"
+required-features = ["converter"]
+
+
+# gamepads on desktop (and its dummy on Android); the web reads the Gamepad API itself (`app::gamepads`)
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+gilrs = "0.11.2"
+# the in-app converters (feature `converter`; private GitHub repositories, fetched over SSH: `.cargo/config.toml`,
+# CONTRIBUTING.md, Setup): the main disc's with CHD images and its steps on threads; the optional
+# second disc's (`br1/`) and Quake III Arena's maps' (`q3/`, the extra stages), library only
+ok_br2_converter = { version = "0.1.0", git = "ssh://git@github.com/openkumite/ok_br2_converter.git", tag = "v0.1.0", default-features = false, features = ["chd", "threads"], optional = true }
+ok_br1_converter = { version = "0.1.0", git = "ssh://git@github.com/openkumite/ok_br1_converter.git", tag = "v0.1.0", default-features = false, features = ["runtime"], optional = true }
+ok_q3_converter = { version = "0.1.0", git = "ssh://git@github.com/openkumite/ok_q3_converter.git", tag = "v0.1.0", default-features = false, features = ["runtime"], optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# the in-app converters in the browser's worker (one thread; feature `converter`)
+ok_br2_converter = { version = "0.1.0", git = "ssh://git@github.com/openkumite/ok_br2_converter.git", tag = "v0.1.0", default-features = false, features = ["chd"], optional = true }
+ok_br1_converter = { version = "0.1.0", git = "ssh://git@github.com/openkumite/ok_br1_converter.git", tag = "v0.1.0", default-features = false, features = ["runtime"], optional = true }
+ok_q3_converter = { version = "0.1.0", git = "ssh://git@github.com/openkumite/ok_q3_converter.git", tag = "v0.1.0", default-features = false, features = ["runtime"], optional = true }
+wasm-bindgen = "0.2"
+cpal = { version = "0.15", features = ["wasm-bindgen"] }
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Window", "Location", "Document", "Element", "HtmlCanvasElement", "Response", "console", "Navigator", "Performance", "Storage", "Blob", "BlobPropertyBag", "Url", "HtmlAnchorElement", "HtmlInputElement", "HtmlElement", "CssStyleDeclaration", "FileList", "File", "Node", "HtmlBodyElement", "Gamepad", "GamepadButton", "GamepadMappingType", "StorageManager", "StorageEstimate", "FileSystemHandle", "FileSystemDirectoryHandle", "FileSystemFileHandle", "FileSystemGetDirectoryOptions", "FileSystemGetFileOptions", "FileSystemRemoveOptions", "FileSystemWritableFileStream", "WritableStream", "Worker", "DedicatedWorkerGlobalScope", "MessageEvent", "FileReaderSync", "FileSystemSyncAccessHandle"] }
+console_error_panic_hook = "0.1"
+
+# Android (engine addition, docs/android.md): winit's NativeActivity backend (`android_main`), the JNI calls into the
+# Java activity (`platform::android`); the version cpal already pulls in
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { version = "0.30.13", features = ["android-native-activity"] }
+jni = "0.21"
+
+[profile.dev]
+opt-level = 1
+[profile.dev.package."*"]
+opt-level = 3

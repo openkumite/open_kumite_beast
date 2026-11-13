@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenKumiteBeast</title>
+  <!-- touch-action / overscroll-behavior: a finger on the canvas is the game's (the setup screen's drag-to-scroll and
+       tap-on-lift), never the browser's pan, zoom or pull-to-refresh (which would cancel the touch or reload the page) -->
+  <style>html,body{margin:0;height:100%;background:#000;overscroll-behavior:none}canvas{width:100%;height:100%;display:block;touch-action:none}</style>
+  <link data-trunk rel="rust" data-wasm-opt="z" data-bin="okbeast" data-type="main" data-cargo-features="netplay-webrtc" />
+  <!-- the setup screen's CONVERT DISC IMAGE runs the converter in this Web Worker (src/app/setup/worker.rs); its files are
+       not hashed: a change to the page / worker messages raises worker::PROTOCOL (an old cached worker is refused) -->
+  <link data-trunk rel="rust" data-wasm-opt="z" data-bin="convert_worker" data-type="worker" data-loader-shim data-cargo-features="netplay-webrtc" />
+</head>
+<body></body>
+</html>

@@ -1,0 +1,50 @@
+# cargo-deny policy (`cargo deny check`): advisories, licenses, duplicate / banned crates, sources.
+
+[graph]
+all-features = false
+
+[advisories]
+# unmaintained / unsound notices that only reach us transitively and do not apply to how the crates are used
+ignore = [
+    # ttf-parser: winit's Linux Wayland title-bar decorations (sctk-adwaita → ab_glyph)
+    { id = "RUSTSEC-2026-0192", reason = "transitive via winit/sctk-adwaita, fonts are not parsed from untrusted input" },
+    # tokio: only wasm-bindgen-futures (web build) pulls it in; AsyncFd is not used on wasm
+    { id = "RUSTSEC-2026-0386", reason = "transitive via wasm-bindgen-futures, AsyncFd unused" },
+]
+
+[licenses]
+confidence-threshold = 0.9
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "0BSD",
+    "Unlicense",
+    "Unicode-3.0",
+    # symphonia (MP3 decoding): file-level copyleft, used unmodified
+    "MPL-2.0",
+]
+exceptions = [
+    # Mozilla's root certificates as data (the desktop netplay-webrtc build's wss:// signaling, via matchbox_socket)
+    { name = "webpki-roots", allow = ["CDLA-Permissive-2.0"] },
+]
+
+[licenses.private]
+# the port itself is not published
+ignore = true
+
+[bans]
+# graphics / windowing stacks pull several versions of some crates; report them without failing
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# the project's own converter crates (git dependencies on tagged releases)
+allow-org = { github = ["openkumite"] }

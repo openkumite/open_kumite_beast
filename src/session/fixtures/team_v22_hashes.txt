@@ -1,0 +1,29 @@
+team_2v2_st0 500 c0afc23e8297900c
+team_2v2_st0 1000 a730f465e4c25d29
+team_2v2_st0 1500 f15295ecdf8c1fe4
+team_2v2_st0 2000 72b453825343477a
+team_2v2_st0 2500 7648394d27129748
+team_2v2_st0 3000 7ec2a2ed4851e490
+team_2v2_st0 3500 97281cdc9d6beb88
+team_2v2_st0 4000 cfe53175c9863356
+team_2v2_st0 4500 3869e670ec65f61d
+team_2v2_st0 5000 1e6f1be3f721504d
+team_2v2_st0 5500 733a99929ab34ea4
+team_2v2_st0 6000 1b4bee4ec6dc30cd
+team_2v2_st0 6500 140b169ae9b0964f
+team_2v2_st0 7000 60df5824fbea4e57
+team_2v2_st0 7011 b3caa00cfb009229 Some(Winner(1))
+team_ffa_st0 500 e0139c6351e856b4
+team_ffa_st0 1000 931de458bc047b22
+team_ffa_st0 1500 fc10344dde10bdd7
+team_ffa_st0 2000 98a15edb48497efe
+team_ffa_st0 2500 d0f0a7f51ecde792
+team_ffa_st0 3000 0a36b3362013e9b1
+team_ffa_st0 3500 513636eb5d0e5065
+team_ffa_st0 4000 4af8a923f404e426
+team_ffa_st0 4500 7c72698972a620b0
+team_ffa_st0 5000 3c9e388deb4fddf0
+team_ffa_st0 5500 30f8662a10f52c39
+team_ffa_st0 6000 3507b5670609f1fe
+team_ffa_st0 6500 b723bc3903f76a73
+team_ffa_st0 6619 b5394e1720210afe Some(Winner(2))

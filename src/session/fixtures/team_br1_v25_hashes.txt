@@ -1,0 +1,21 @@
+team_br1_2v2_st0_v25 500 c3d20312ee1e1857
+team_br1_2v2_st0_v25 1000 ad874a0a85c2becf
+team_br1_2v2_st0_v25 1500 e573df6ea6b60a6a
+team_br1_2v2_st0_v25 2000 c1f0b571289c5243
+team_br1_2v2_st0_v25 2500 a3ffd84357979bcc
+team_br1_2v2_st0_v25 3000 ff931e36fc280b8a
+team_br1_2v2_st0_v25 3500 38afea6f4d9623e0
+team_br1_2v2_st0_v25 4000 2f0796aa944d21b3
+team_br1_2v2_st0_v25 4500 565f86a2c0fa2417
+team_br1_2v2_st0_v25 5000 b7fe910cff57cfab
+team_br1_2v2_st0_v25 5500 8025ef6997826f73
+team_br1_2v2_st0_v25 6000 2313620393bea43b
+team_br1_2v2_st0_v25 6500 d33310b7915e9dc9
+team_br1_2v2_st0_v25 7000 3014986c9f883a49
+team_br1_2v2_st0_v25 7500 372ab358059a9a69
+team_br1_2v2_st0_v25 8000 9d58a213eb66bbea
+team_br1_2v2_st0_v25 8500 a2b4249d18d1772e
+team_br1_2v2_st0_v25 9000 71da3e0217f89244
+team_br1_2v2_st0_v25 9500 f6208f2b67a01c1c
+team_br1_2v2_st0_v25 10000 3b23144130982c9b
+team_br1_2v2_st0_v25 10070 b1cfeafe0d8ffac2 Some(Winner(0))

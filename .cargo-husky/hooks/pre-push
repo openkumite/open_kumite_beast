@@ -1,0 +1,7 @@
+#!/bin/sh
+# cargo-husky: tests, dependency policy (licenses, sources, bans) and security advisories before every push
+set -e
+export PATH="$HOME/.cargo/bin:$PATH"
+cargo test --release --quiet
+cargo deny check --hide-inclusion-graph
+cargo audit --quiet

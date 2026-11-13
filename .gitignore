@@ -1,0 +1,17 @@
+/target
+/dist
+.claude/
+br2_crash_*.txt
+br2_report_*.txt
+okb_crash_*.txt
+okb_report_*.txt
+/android/build
+# no image of the original game in git (screenshots, captures, extracted art)
+*.png
+*.PNG
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tim
+*.webp
