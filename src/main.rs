@@ -8,8 +8,13 @@
 //! save, `platform::game_data`, checked first by `assets::manifest::check_dir`: missing or unusable data opens the
 //! setup screen, `app::setup`)
 
+// Windows release builds start without a console window (a game, launched from Explorer; started from a terminal they
+// print to its console, `attach_parent_console`); debug builds keep their own
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
+    open_kumite_beast::platform::support::attach_parent_console();
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|a| a == "--help" || a == "-h") {
         println!(
@@ -51,7 +56,7 @@ fn main() {
              OKB_RECORD=path (the whole session written there as a replay at exit),\n\
              OKB_SETUP_FROM=PATH / OKB_SETUP_SCAN=dirs / OKB_SETUP_SLOW=ms (the setup screen: PATH dropped at UI frame 30 and installed at 60, the scan's folders, a pause per copied file),\n\
              OKB_NETSIM=lat_ms,loss_pct[,jitter_ms] (netplay over a simulated network), OKB_NETSCRIPT (netplay: this side's scripted pad by session frame).\n\
-             Crash reports go to okb_crash_<time>.txt, F8 writes okb_report_<time>.txt. Every OKB_ variable is also read as BR2_…",
+             Crash reports go to okb_crash_<time>.txt, F8 writes okb_report_<time>.txt (the working directory, else beside the save). Every OKB_ variable is also read as BR2_…",
             open_kumite_beast::platform::support::VERSION,
             open_kumite_beast::platform::support::TOOLS_HELP,
             open_kumite_beast::platform::support::HELP

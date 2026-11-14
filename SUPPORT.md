@@ -1,8 +1,8 @@
 # Reporting a problem
 
-1. When it happens, press **F8**. This writes a support report (`okb_report_<time>.txt` next to the game; on the web it goes to the browser console, F12 → Console). The report holds the build, the platform, what was on screen (menu, round state, both fighters) and the last 400 log lines.
+1. When it happens, press **F8**. This writes a support report (`okb_report_<time>.txt` in the folder the game was started in, or in the save's folder when that one cannot be written, e.g. the macOS app; a message on screen shows where it went; on the web it goes to the browser console, F12 → Console). The report holds the build, the platform, what was on screen (menu, round state, both fighters) and the last 400 log lines.
 2. Press **F7** for a screenshot (`okb_shot_<time>.png`, desktop only).
-3. If the game crashed, send the `okb_crash_<time>.txt` file it wrote.
+3. If the game crashed, send the `okb_crash_<time>.txt` file it wrote (in the same place as the support report).
 
 Send the report, the screenshot and a sentence about what you did just before.
 

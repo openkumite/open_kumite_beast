@@ -1,0 +1,293 @@
+# Releases of open_kumite_beast. A signed tag `vX.Y.Z` (matching Cargo.toml's version) builds every package and opens a
+# draft GitHub Release with them and SHA256SUMS.txt, to be published by hand. Run by hand (on the commit to be tagged,
+# before the tag: a tag cannot be moved or deleted), or on a pull request that changes the packaging or the crate's
+# manifest, it builds the same packages as artifacts only (the APK then signed with a debug key).
+#
+# Packages: Windows, macOS and Linux for x86_64 and arm64 (desktop builds unsigned, the macOS app ad-hoc signed), the
+# web build, and one Android APK for arm64-v8a and x86_64 signed with the release key (secrets ANDROID_KEYSTORE_BASE64,
+# ANDROID_KEYSTORE_PASSWORD). Each carries LICENSE, THIRD_PARTY_NOTICES.md and THIRD_PARTY_LICENSES.html (cargo-about;
+# the APK under assets/). The Windows builds link the C runtime statically (no Visual C++ Redistributable needed).
+# None contains game data: the player converts their own disc in the app.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - android/build.sh
+      - about.toml
+      - about.hbs
+      - Cargo.toml
+      - Cargo.lock
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  FEATURES: netplay-webrtc
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      code: ${{ steps.v.outputs.code }}
+      release: ${{ steps.v.outputs.release }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: v
+        env:
+          # a pull request's own head commit (GITHUB_SHA is the temporary merge commit there)
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          crate=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -1)
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            [ "$GITHUB_REF_NAME" = "v$crate" ] || { echo "::error::tag $GITHUB_REF_NAME does not match Cargo.toml's version $crate"; exit 1; }
+            version=$crate release=true
+          else
+            version=$crate-dev.${SHA::7} release=false
+          fi
+          IFS=. read -r major minor patch <<< "${crate%%-*}"
+          code=$((major * 10000 + minor * 100 + patch))
+          printf 'version=%s\ncode=%s\nrelease=%s\n' "$version" "$code" "$release" >> "$GITHUB_OUTPUT"
+          echo "version $version, Android versionCode $code, release $release"
+
+  licenses:
+    name: License texts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-about@0.9.3
+      - run: |
+          mkdir -p legal
+          cargo about generate --locked --features "$FEATURES" about.hbs -o legal/THIRD_PARTY_LICENSES.html
+          cp LICENSE THIRD_PARTY_NOTICES.md legal/
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: legal
+          path: legal
+
+  desktop:
+    name: ${{ matrix.name }}
+    needs: [version, licenses]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64, os: ubuntu-24.04, target: x86_64-unknown-linux-gnu }
+          - { name: linux-arm64, os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu }
+          # the C runtime linked in: a clean Windows has no VCRUNTIME140.dll
+          - { name: windows-x86_64, os: windows-latest, target: x86_64-pc-windows-msvc, rustflags: -C target-feature=+crt-static }
+          - { name: windows-arm64, os: windows-11-arm, target: aarch64-pc-windows-msvc, rustflags: -C target-feature=+crt-static }
+          - { name: macos-arm64, os: macos-latest, target: aarch64-apple-darwin }
+          - { name: macos-x86_64, os: macos-latest, target: x86_64-apple-darwin }
+    runs-on: ${{ matrix.os }}
+    env:
+      PKG: okbeast-${{ needs.version.outputs.version }}-${{ matrix.name }}
+      VERSION: ${{ needs.version.outputs.version }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev pkg-config
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: ${{ matrix.target }}
+      - run: cargo build --release --locked --bin okbeast --features "$FEATURES" --target ${{ matrix.target }}
+        env:
+          RUSTFLAGS: ${{ matrix.rustflags }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: legal
+          path: legal
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p "dist/$PKG"
+          cp target/${{ matrix.target }}/release/okbeast legal/* "dist/$PKG/"
+          tar -C dist -czf "dist/$PKG.tar.gz" "$PKG"
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          mkdir -p "dist/$PKG"
+          cp target/${{ matrix.target }}/release/okbeast.exe legal/* "dist/$PKG/"
+          # Windows' own bsdtar (Git Bash's GNU tar writes no zip)
+          (cd dist && /c/Windows/System32/tar.exe -a -c -f "$PKG.zip" "$PKG")
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          app="dist/$PKG/OpenKumiteBeast.app"
+          mkdir -p "$app/Contents/MacOS"
+          cp target/${{ matrix.target }}/release/okbeast "$app/Contents/MacOS/"
+          cat > "$app/Contents/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key><string>OpenKumiteBeast</string>
+            <key>CFBundleDisplayName</key><string>OpenKumiteBeast</string>
+            <key>CFBundleIdentifier</key><string>com.openkumitebeast.game</string>
+            <key>CFBundleExecutable</key><string>okbeast</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleShortVersionString</key><string>${VERSION%%-*}</string>
+            <key>CFBundleVersion</key><string>${VERSION%%-*}</string>
+            <key>LSMinimumSystemVersion</key><string>11.0</string>
+            <key>LSApplicationCategoryType</key><string>public.app-category.action-games</string>
+            <key>NSHighResolutionCapable</key><true/>
+          </dict>
+          </plist>
+          EOF
+          plutil -lint "$app/Contents/Info.plist"
+          # ad-hoc signature (no Developer ID): the first start needs the user's consent (see the release notes)
+          codesign --force --sign - "$app"
+          cp legal/* "dist/$PKG/"
+          (cd dist && ditto -c -k --keepParent "$PKG" "$PKG.zip")
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.PKG }}
+          path: dist/${{ env.PKG }}.*
+          if-no-files-found: error
+
+  web:
+    name: web
+    needs: [version, licenses]
+    runs-on: ubuntu-latest
+    env:
+      PKG: okbeast-${{ needs.version.outputs.version }}-web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: trunk@0.20.2
+      - run: trunk build --release --public-url ./
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: legal
+          path: legal
+      - run: |
+          mkdir -p out
+          mv dist "out/$PKG"
+          cp legal/* "out/$PKG/"
+          (cd out && zip -qr "$PKG.zip" "$PKG")
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.PKG }}
+          path: out/${{ env.PKG }}.zip
+          if-no-files-found: error
+
+  android:
+    name: android
+    needs: [version, licenses]
+    runs-on: ubuntu-latest
+    env:
+      PKG: okbeast-${{ needs.version.outputs.version }}-android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          targets: aarch64-linux-android, x86_64-linux-android
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-ndk@4.1.2
+      - run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" > /dev/null
+      - run: echo "ANDROID_NDK_HOME=${ANDROID_NDK_LATEST_HOME:?the runner has no NDK}" >> "$GITHUB_ENV"
+      # a release tag signs with the release key; any other run with a debug key
+      - name: Release key
+        if: needs.version.outputs.release == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          [ -n "$KEYSTORE_BASE64" ] || { echo "::error::secret ANDROID_KEYSTORE_BASE64 is missing"; exit 1; }
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "RELEASE_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: legal
+          path: legal
+      - run: android/build.sh
+        env:
+          ABIS: arm64-v8a x86_64
+          ASSETS: legal
+          VERSION_NAME: ${{ needs.version.outputs.version }}
+          VERSION_CODE: ${{ needs.version.outputs.code }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ needs.version.outputs.release == 'true' && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
+          RELEASE_KEY_ALIAS: openkumitebeast
+      - run: |
+          rm -f "$RUNNER_TEMP/release.jks"
+          mkdir -p out && cp android/build/okbeast.apk "out/$PKG.apk"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.PKG }}
+          path: out/${{ env.PKG }}.apk
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    if: needs.version.outputs.release == 'true'
+    needs: [version, desktop, web, android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: okbeast-*
+          path: files
+          merge-multiple: true
+      - name: Checksums and notes
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          (cd files && sha256sum okbeast-* > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          cat > notes.md <<EOF
+          OpenKumiteBeast $VERSION. It contains no game data: on first start it converts your own original disc (or
+          uses data you converted before).
+
+          | System | File |
+          |---|---|
+          | Windows | \`okbeast-$VERSION-windows-x86_64.zip\`, \`okbeast-$VERSION-windows-arm64.zip\` |
+          | macOS | \`okbeast-$VERSION-macos-arm64.zip\` (Apple silicon), \`okbeast-$VERSION-macos-x86_64.zip\` (Intel) |
+          | Linux | \`okbeast-$VERSION-linux-x86_64.tar.gz\`, \`okbeast-$VERSION-linux-arm64.tar.gz\` |
+          | Web | \`okbeast-$VERSION-web.zip\` (serve the folder over HTTP) |
+          | Android 8+ | \`okbeast-$VERSION-android.apk\` (arm64 and x86_64) |
+
+          The desktop builds are not signed, so the first start asks for consent: on Windows choose "More info → Run
+          anyway"; on macOS 15 and later open the app once, then System Settings → Privacy & Security → "Open Anyway"
+          (macOS 14 and earlier: right-click the app → Open; or \`xattr -dr com.apple.quarantine OpenKumiteBeast.app\`).
+          SHA256SUMS.txt lists every file's checksum.
+          EOF
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --verify-tag \
+            --title "OpenKumiteBeast ${{ needs.version.outputs.version }}" --notes-file notes.md --generate-notes \
+            files/*

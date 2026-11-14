@@ -1,0 +1,33 @@
+# cargo-about (`cargo about generate --features netplay-webrtc about.hbs`): the license texts of every crate a shipped
+# build links, written into the release packages as THIRD_PARTY_LICENSES.html. The accepted licenses are deny.toml's.
+accepted = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "0BSD",
+    "Unlicense",
+    "Unicode-3.0",
+    "MPL-2.0",
+    "CDLA-Permissive-2.0",
+]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "wasm32-unknown-unknown",
+    "aarch64-linux-android",
+    "x86_64-linux-android",
+]
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+
+# the project's own crates (publish = false: the engine and the converters) are not third-party
+[private]
+ignore = true
