@@ -1,14 +1,17 @@
-//! The app's adaptive launcher icon in android/res/ (docs/android.md): "OKB" in plain stroked letters drawn here as
-//! vector paths (no font, no game artwork) on a dark red background.
+//! The app's icon: the Android adaptive launcher icon in android/res/ (docs/android.md) and the web app's SVG icons in
+//! web/icons/ (the PWA, CONTRIBUTING.md "Web app"): "OKB" in plain stroked letters drawn here as vector paths (no font,
+//! no game artwork) on a dark red background.
 //!
 //! `cargo test --test android_icon` checks that the committed files are what this writes;
 //! `OKB_WRITE_ICON=1 cargo test --test android_icon` writes them (after a change here).
 //!
-//! Output (committed; android/build.sh compiles res/ with aapt2):
-//!   mipmap-anydpi-v26/ic_launcher.xml        the adaptive icon: background, foreground, monochrome (themed icons)
-//!   drawable/ic_launcher_background.xml      dark red with a darker lower half
-//!   drawable/ic_launcher_foreground.xml      the letters with a shadow
-//!   drawable/ic_launcher_monochrome.xml      the letters alone
+//! Output (committed; android/build.sh compiles res/ with aapt2; tools/web_icons.sh renders the PNGs from the SVGs):
+//!   android/res/mipmap-anydpi-v26/ic_launcher.xml     the adaptive icon: background, foreground, monochrome
+//!   android/res/drawable/ic_launcher_background.xml   dark red with a darker lower half
+//!   android/res/drawable/ic_launcher_foreground.xml   the letters with a shadow
+//!   android/res/drawable/ic_launcher_monochrome.xml   the letters alone
+//!   web/icons/icon.svg                                the visible 72 x 72 middle with rounded corners (purpose "any")
+//!   web/icons/icon-maskable.svg                       the whole 108 x 108 canvas (purpose "maskable")
 //! The vector canvas is the adaptive icon's 108 x 108 dp; the letters stay inside the 66 dp safe circle.
 use std::fmt::Write as _;
 use std::path::Path;
@@ -60,20 +63,58 @@ fn vector(body: &str) -> String {
     )
 }
 
-/// (path under android/res, contents)
+const BACKGROUND: [(&str, &str); 2] = [("M0,0 H108 V108 H0 Z", "#7A0E0E"), ("M0,62 H108 V108 H0 Z", "#5C0909")];
+
+/// The same drawing as SVG: the background, the shadowed letters and the white letters (an Android group's transform,
+/// scale about the pivot then translate, written out). `view`: the viewBox; `round`: the corner radius of a clip.
+fn svg(view: (f64, f64, f64), round: f64) -> String {
+    let (x, y, w) = view;
+    let mut body = String::new();
+    for (d, fill) in BACKGROUND {
+        writeln!(body, "    <path d=\"{d}\" fill=\"{fill}\" />").unwrap();
+    }
+    for (colour, dx, dy) in [("#3A0303", 1.2, 1.6), ("#F4EEEA", 0.0, 0.0)] {
+        writeln!(
+            body,
+            "    <g transform=\"translate({} {}) translate(54 54) scale({SCALE}) translate(-54 -54)\" fill=\"none\" \
+             stroke=\"{colour}\" stroke-width=\"{STROKE}\" stroke-linecap=\"square\" stroke-linejoin=\"miter\">",
+            SHIFT.0 + dx,
+            SHIFT.1 + dy
+        )
+        .unwrap();
+        for d in LETTERS {
+            writeln!(body, "      <path d=\"{d}\" />").unwrap();
+        }
+        body += "    </g>\n";
+    }
+    let (open, close) = if round > 0.0 {
+        (
+            format!(
+                "  <clipPath id=\"r\"><rect x=\"{x}\" y=\"{y}\" width=\"{w}\" height=\"{w}\" rx=\"{round}\" /></clipPath>\n  \
+                 <g clip-path=\"url(#r)\">\n"
+            ),
+            "  </g>\n",
+        )
+    } else {
+        ("  <g>\n".to_string(), "  </g>\n")
+    };
+    format!(
+        "{HEADER}<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{x} {y} {w} {w}\" width=\"512\" height=\"512\">\n\
+         {open}{body}{close}</svg>\n"
+    )
+}
+
+/// (path under the repository, contents)
 fn files() -> Vec<(&'static str, String)> {
     vec![
         (
-            "drawable/ic_launcher_background.xml",
-            vector(
-                "    <path android:pathData=\"M0,0 H108 V108 H0 Z\" android:fillColor=\"#7A0E0E\" />\n    \
-                 <path android:pathData=\"M0,62 H108 V108 H0 Z\" android:fillColor=\"#5C0909\" />",
-            ),
+            "android/res/drawable/ic_launcher_background.xml",
+            vector(&BACKGROUND.map(|(d, fill)| format!("    <path android:pathData=\"{d}\" android:fillColor=\"{fill}\" />")).join("\n")),
         ),
-        ("drawable/ic_launcher_foreground.xml", vector(&(group("#3A0303", 1.2, 1.6) + "\n" + &group("#F4EEEA", 0.0, 0.0)))),
-        ("drawable/ic_launcher_monochrome.xml", vector(&group("#FFFFFFFF", 0.0, 0.0))),
+        ("android/res/drawable/ic_launcher_foreground.xml", vector(&(group("#3A0303", 1.2, 1.6) + "\n" + &group("#F4EEEA", 0.0, 0.0)))),
+        ("android/res/drawable/ic_launcher_monochrome.xml", vector(&group("#FFFFFFFF", 0.0, 0.0))),
         (
-            "mipmap-anydpi-v26/ic_launcher.xml",
+            "android/res/mipmap-anydpi-v26/ic_launcher.xml",
             format!(
                 "{HEADER}<adaptive-icon xmlns:android=\"http://schemas.android.com/apk/res/android\">\n    \
                  <background android:drawable=\"@drawable/ic_launcher_background\" />\n    \
@@ -81,15 +122,17 @@ fn files() -> Vec<(&'static str, String)> {
                  <monochrome android:drawable=\"@drawable/ic_launcher_monochrome\" />\n</adaptive-icon>\n"
             ),
         ),
+        ("web/icons/icon.svg", svg((18.0, 18.0, 72.0), 16.0)),
+        ("web/icons/icon-maskable.svg", svg((0.0, 0.0, 108.0), 0.0)),
     ]
 }
 
 #[test]
 fn android_icon_is_generated() {
-    let res = Path::new(env!("CARGO_MANIFEST_DIR")).join("android/res");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let write = open_kumite_beast::base::env::var_os("WRITE_ICON").is_some_and(|v| v == "1");
     for (rel, text) in files() {
-        let path = res.join(rel);
+        let path = root.join(rel);
         if write {
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(&path, &text).unwrap();

@@ -219,7 +219,8 @@ the app).
 3. Tag that commit with a signed tag and push it: `git tag -s v0.2.0 -m "OpenKumiteBeast 0.2.0" && git push origin
    v0.2.0`. Only organisation admins can create `v*` tags, and nobody can move or delete one.
 4. The workflow checks that the tag is `v` + the crate's version, builds every package and opens a **draft** release
-   with them, `SHA256SUMS.txt` and generated notes. Look it over, then publish it.
+   with them, `SHA256SUMS.txt` and generated notes. Look it over, then publish it: publishing also deploys its web
+   package to GitHub Pages (Web app, below).
 
 | package | built on | contents |
 |---|---|---|
@@ -242,6 +243,25 @@ with it when `RELEASE_KEYSTORE` is set (see its header), with the debug key othe
 Run by hand (Actions → Release → Run workflow), or on a pull request that changes the packaging (the workflow,
 `android/build.sh`, `about.toml`, `about.hbs`, `Cargo.toml`, `Cargo.lock`), the workflow builds the same packages as
 artifacts only, version `X.Y.Z-dev.<commit>` (a pull request's head commit), the APK signed with a debug key.
+
+## Web app
+
+The web build is an installable Progressive Web App, served by GitHub Pages at
+https://openkumite.github.io/open_kumite_beast/.
+
+- `.github/workflows/pages.yml` deploys a release's own `okbeast-X.Y.Z-web.zip` when that release is **published** (not
+  for drafts, not for pushes to `main`); run it by hand with a tag to deploy an earlier release again.
+- `web/manifest.webmanifest` (name, icons, fullscreen landscape) and `web/icons/` are copied into the build by Trunk
+  (`index.html`). The icons are drawn by `tests/android_icon.rs` (`web/icons/*.svg`; `OKB_WRITE_ICON=1 cargo test
+  --test android_icon`) and rendered to PNG by `tools/web_icons.sh` (resvg).
+- `web/sw.js` is the service worker. After each build Trunk runs `tools/pwa_service_worker.sh` (`Trunk.toml`): a
+  release build gets the list of every file and a version (a hash of them), so the app starts without a network; a
+  debug build (`trunk serve`) gets a worker that caches nothing and removes itself. The hook runs `sh`, so every
+  `trunk build` / `trunk serve` needs a POSIX shell on `PATH` (on Windows: Git Bash or WSL).
+- The first start after a deploy still runs the old version and downloads the new one in the background; the start
+  after that (once no page of the old one is open) runs the new version, which then deletes the old version's cache.
+  The game data is not cached by the worker: it is in the browser's origin-private file system
+  (`platform::game_data`) and stays across versions.
 
 ## Review process
 
