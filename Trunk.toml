@@ -1,0 +1,5 @@
+# trunk: after each build, write the web app's service worker (tools/pwa_service_worker.sh; CONTRIBUTING.md, "Web app")
+[[hooks]]
+stage = "post_build"
+command = "sh"
+command_arguments = ["tools/pwa_service_worker.sh"]

@@ -1,0 +1,53 @@
+# The web app on GitHub Pages (https://openkumite.github.io/open_kumite_beast/). Publishing a release deploys that
+# release's own web package (okbeast-X.Y.Z-web.zip, built by release.yml, with the PWA's manifest and service worker),
+# so the site always runs a released version. Run by hand with a tag to deploy an earlier release again.
+name: Pages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to deploy (e.g. v0.2.0)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy the web app
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: The release's web package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'okbeast-*-web.zip' --dir pkg
+          unzip -q pkg/*.zip -d pkg
+          site=$(find pkg -mindepth 1 -maxdepth 1 -type d)
+          [ -f "$site/index.html" ] && [ -f "$site/sw.js" ] && [ -f "$site/manifest.webmanifest" ] \
+            || { echo "::error::$TAG's web package lacks index.html, sw.js or manifest.webmanifest"; exit 1; }
+          if ! grep -q '^const FILES = \["\./' "$site/sw.js" || ! grep -q 'okbeast-' "$site/sw.js"; then
+            echo "::error::$TAG's sw.js is not a release build's worker (no file list)"; exit 1
+          fi
+          mv "$site" site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

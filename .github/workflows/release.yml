@@ -22,6 +22,10 @@ on:
       - about.hbs
       - Cargo.toml
       - Cargo.lock
+      - index.html
+      - Trunk.toml
+      - web/**
+      - tools/pwa_service_worker.sh
 
 permissions:
   contents: read
@@ -276,7 +280,7 @@ jobs:
           | Windows | \`okbeast-$VERSION-windows-x86_64.zip\`, \`okbeast-$VERSION-windows-arm64.zip\` |
           | macOS | \`okbeast-$VERSION-macos-arm64.zip\` (Apple silicon), \`okbeast-$VERSION-macos-x86_64.zip\` (Intel) |
           | Linux | \`okbeast-$VERSION-linux-x86_64.tar.gz\`, \`okbeast-$VERSION-linux-arm64.tar.gz\` |
-          | Web | \`okbeast-$VERSION-web.zip\` (serve the folder over HTTP) |
+          | Web | play or install it at https://openkumite.github.io/open_kumite_beast/ (once this release is published), or \`okbeast-$VERSION-web.zip\` (serve the folder over HTTPS) |
           | Android 8+ | \`okbeast-$VERSION-android.apk\` (arm64 and x86_64) |
 
           The desktop builds are not signed, so the first start asks for consent: on Windows choose "More info → Run

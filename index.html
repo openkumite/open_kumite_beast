@@ -4,6 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OpenKumiteBeast</title>
+  <!-- the installable web app (PWA, CONTRIBUTING.md "Web app"): the manifest, the icons, the service worker (written
+       into the build by tools/pwa_service_worker.sh, Trunk.toml) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#7A0E0E">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link data-trunk rel="copy-file" href="web/manifest.webmanifest" />
+  <link data-trunk rel="copy-file" href="web/sw.js" />
+  <link data-trunk rel="copy-dir" href="web/icons" />
+  <script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));</script>
   <!-- touch-action / overscroll-behavior: a finger on the canvas is the game's (the setup screen's drag-to-scroll and
        tap-on-lift), never the browser's pan, zoom or pull-to-refresh (which would cancel the touch or reload the page) -->
   <style>html,body{margin:0;height:100%;background:#000;overscroll-behavior:none}canvas{width:100%;height:100%;display:block;touch-action:none}</style>
