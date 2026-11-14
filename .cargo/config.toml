@@ -1,4 +1,0 @@
-# The converter crates are private GitHub repositories (Cargo.toml, git dependencies over SSH): let Cargo fetch them
-# with the git command line, which uses the developer's SSH keys / agent.
-[net]
-git-fetch-with-cli = true

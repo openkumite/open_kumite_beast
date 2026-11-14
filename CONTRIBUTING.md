@@ -18,14 +18,12 @@ work. Read [`ARCHITECTURE.md`](ARCHITECTURE.md) first for the layout. Paths are 
   read); without a stage's files it is not offered and its tests are skipped
   ([`docs/extra_stage_q3dm17.md`](docs/extra_stage_q3dm17.md), [`docs/extra_stage_q3dm6.md`](docs/extra_stage_q3dm6.md)).
   The tests that convert the paks themselves (`--ignored`) read `OKB_Q3_PAKS=dir` or `../../19_games/PC/Quake 3/baseq3`.
-- Access to the three converter crates `ok_br2_converter`, `ok_br1_converter` and `ok_q3_converter`: private
-  repositories in the GitHub organisation `openkumite`, git dependencies on a release tag (`tag = "vX.Y.Z"` in
-  `Cargo.toml`, the commit pinned in `Cargo.lock`). Cargo fetches them over SSH with the git command line
-  (`.cargo/config.toml`: `net.git-fetch-with-cli`), so an SSH key with access to the organisation must be loaded
-  (`ssh -T git@github.com` answers with your login); the CI uses read-only deploy keys
-  (`.github/workflows/ci.yml`). Cargo reads their manifests for every build, also `--no-default-features`, and the fuzz crate needs them too. A converter change reaches the
-  engine only through GitHub: push and tag the converter (`git tag -s vX.Y.Z`), raise the `tag` and `version` of all
-  its entries in `Cargo.toml` (desktop and wasm32), then `cargo update -p <crate>`.
+- The three converter crates `ok_br2_converter`, `ok_br1_converter` and `ok_q3_converter`: public repositories in the
+  GitHub organisation `openkumite`, git dependencies on a release tag (`tag = "vX.Y.Z"` in `Cargo.toml`, the commit
+  pinned in `Cargo.lock`), fetched over HTTPS with no key or login. Cargo reads their manifests for every build, also
+  `--no-default-features`, and the fuzz crate needs them too. A converter change reaches the engine only through
+  GitHub: push and tag the converter (`git tag -s vX.Y.Z`), raise the `tag` and `version` of all its entries in
+  `Cargo.toml` (desktop and wasm32), then `cargo update -p <crate>`.
 - The tooling tree beside the repo, outside git: `../.research/` (the golden baseline and the determinism scripts).
 - `cargo test` installs the git hooks (cargo-husky, scripts in `.cargo-husky/hooks/`): fmt + clippy before a commit;
   tests, cargo-deny and cargo-audit before a push.
@@ -98,12 +96,13 @@ Scripted runs, screenshots and every debug switch: [`docs/debug_hooks.md`](docs/
 
 ## Checks
 
-GitHub Actions (`.github/workflows/ci.yml`, on pushes to `main`, pull requests and by hand) runs fmt, clippy (default
-and `--no-default-features`) and the tests on Linux; the wasm32 clippy (with and without `netplay-webrtc`) and a
-`trunk build`; `cargo deny` and `cargo audit`; and a build plus the tests on macOS and Windows. It has no game data,
-so the tests that need it skip themselves: run them locally. It reaches the private converter repositories through a
-read-only deploy key on each, whose private half is the secret `OK_<CRATE>_DEPLOY_KEY` (e.g.
-`OK_BR2_CONVERTER_DEPLOY_KEY`); a new converter needs a key and a secret too.
+GitHub Actions (`.github/workflows/ci.yml`, on pushes to `main`, pull requests and by hand) runs everything that needs
+no game data: on Linux fmt, clippy (default, `--no-default-features`, `netplay-webrtc`), the tests (default and
+`--no-default-features`) and a check that `THIRD_PARTY_NOTICES.md` is current (`tools/third_party_notices.sh`); the
+wasm32 clippy (with and without `netplay-webrtc`) and a `trunk build`; the Android clippy and `android/build.sh`;
+`cargo deny` and `cargo audit`; every fuzz target for 30 s; and clippy, a build and the tests on macOS and Windows. Each
+run keeps the builds (Linux, macOS, Windows, web, the Android APK) as artifacts for 14 days. It has no game data,
+so the tests that need it skip themselves: run them locally.
 
 `unsafe` is denied crate-wide (`[lints.rust] unsafe_code = "deny"` in `Cargo.toml`). The only allowed sites are the
 platform boundary (`platform/android.rs`, the FFI in `platform/support.rs`, the Android entry in `lib.rs`) and the

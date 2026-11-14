@@ -1,7 +1,8 @@
 #!/bin/bash
 # Writes THIRD_PARTY_NOTICES.md: every crate that a shipped build links (all targets, default features plus
-# netplay-webrtc, the union of the desktop, web and Android builds), with its license and source. Path crates (this
-# project's own) are left out. Run it after any change to the dependencies (CONTRIBUTING.md, "Checks").
+# netplay-webrtc, the union of the desktop, web and Android builds), with its license and source. The project's own
+# crates are left out: path crates and the converter crates (git dependencies on github.com/openkumite). Run it after
+# any change to the dependencies (CONTRIBUTING.md, "Checks").
 #
 #   tools/third_party_notices.sh
 set -euo pipefail
@@ -12,7 +13,7 @@ FEATURES=netplay-webrtc
 # name|version|license|repository, one row per crate version, sorted by name; "/" in a license reads as OR.
 rows=$(cargo tree -e normal,build --target all --features "$FEATURES" --prefix none --format '{p}|{l}|{r}' \
     | sed -e 's/ (\*)$//' -e 's/ (proc-macro)|/|/' \
-    | grep -v '^[^|]* (/' \
+    | grep -v -e '^[^|]* (/' -e '^[^|]* (https://github\.com/openkumite/' \
     | sed -e 's/^\([^ ]*\) v\([^|]*\)|/\1|\2|/' \
     | awk -F'|' -v OFS='|' '{ gsub(/ *\/ */, " OR ", $3); print }' \
     | LC_ALL=C sort -t'|' -k1,1 -k2,2V -u)

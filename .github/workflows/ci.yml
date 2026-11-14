@@ -1,10 +1,6 @@
-# CI for open_kumite_beast: checks only, no release builds. There is no game data here, so the tests that need a
-# converted install or a disc image skip themselves.
-#
-# The three converter crates are private git dependencies (Cargo.toml, fetched over SSH with the git command line:
-# .cargo/config.toml). Each converter repository has a read-only deploy key; its private half is a secret of this
-# repository (OK_<CRATE>_DEPLOY_KEY), and the key's comment names the repository so the ssh-agent step routes each
-# fetch to its key.
+# CI for open_kumite_beast: everything that needs no game data. There is no disc and no converted install here, so the
+# tests that need one skip themselves (run them locally). The converter crates are public git dependencies (Cargo.toml),
+# fetched over HTTPS without credentials. Each run keeps the builds (desktop, web, Android) as artifacts for 14 days.
 name: CI
 
 on:
@@ -26,16 +22,10 @@ env:
 
 jobs:
   linux:
-    name: Linux (fmt, clippy, tests)
+    name: Linux (fmt, clippy, tests, notices)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
-        with:
-          ssh-private-key: |
-            ${{ secrets.OK_BR2_CONVERTER_DEPLOY_KEY }}
-            ${{ secrets.OK_BR1_CONVERTER_DEPLOY_KEY }}
-            ${{ secrets.OK_Q3_CONVERTER_DEPLOY_KEY }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev pkg-config
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
@@ -45,21 +35,27 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --release --locked --all-targets -- -D warnings
       - run: cargo clippy --release --locked --all-targets --no-default-features -- -D warnings
+      - run: cargo clippy --release --locked --all-targets --features netplay-webrtc -- -D warnings
       - run: cargo test --release --locked
         env:
           OKB_SAVE_DIR: ${{ runner.temp }}/okb_save
+      - run: cargo test --release --locked --no-default-features
+        env:
+          OKB_SAVE_DIR: ${{ runner.temp }}/okb_save
+      - name: THIRD_PARTY_NOTICES.md is up to date
+        run: tools/third_party_notices.sh && git diff --exit-code THIRD_PARTY_NOTICES.md
+      - run: cargo build --release --locked --bins
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: okbeast-linux-x86_64
+          path: target/release/okbeast
+          retention-days: 14
 
   web:
     name: Web (wasm32, trunk)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
-        with:
-          ssh-private-key: |
-            ${{ secrets.OK_BR2_CONVERTER_DEPLOY_KEY }}
-            ${{ secrets.OK_BR1_CONVERTER_DEPLOY_KEY }}
-            ${{ secrets.OK_Q3_CONVERTER_DEPLOY_KEY }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           toolchain: stable
@@ -72,18 +68,43 @@ jobs:
       - run: cargo clippy --release --locked --target wasm32-unknown-unknown --lib -- -D warnings
       - run: cargo clippy --release --locked --target wasm32-unknown-unknown --features netplay-webrtc --lib --bins -- -D warnings
       - run: trunk build --release --public-url ./
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: okbeast-web
+          path: dist
+          retention-days: 14
+
+  android:
+    name: Android (APK)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          targets: aarch64-linux-android
+          components: clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-ndk
+      # the runner's Android SDK (ANDROID_HOME) and newest NDK; the platform the APK compiles against
+      - run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" > /dev/null
+      # ANDROID_NDK_LATEST_HOME is the runner's own variable (not in the `env` context): set it for the next steps
+      - run: echo "ANDROID_NDK_HOME=${ANDROID_NDK_LATEST_HOME:?the runner has no NDK}" >> "$GITHUB_ENV"
+      - run: cargo ndk -t arm64-v8a -P 26 clippy --release --locked --lib --features netplay-webrtc -- -D warnings
+      - run: android/build.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: okbeast-android-arm64
+          path: android/build/okbeast.apk
+          retention-days: 14
 
   deps:
     name: Dependencies (deny, audit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
-        with:
-          ssh-private-key: |
-            ${{ secrets.OK_BR2_CONVERTER_DEPLOY_KEY }}
-            ${{ secrets.OK_BR1_CONVERTER_DEPLOY_KEY }}
-            ${{ secrets.OK_Q3_CONVERTER_DEPLOY_KEY }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           toolchain: stable
@@ -93,26 +114,59 @@ jobs:
       - run: cargo deny --locked check
       - run: cargo audit
 
+  fuzz:
+    name: Fuzz smoke (30 s per target)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev pkg-config
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: nightly
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: fuzz
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-fuzz
+      - name: Run every fuzz target
+        working-directory: fuzz
+        # the prebuilt cargo-fuzz is a static musl binary and defaults to the musl target: build for the runner's own
+        # (gnu) target
+        run: |
+          for t in $(cargo fuzz list); do
+            mkdir -p corpus/$t
+            cargo fuzz run --target x86_64-unknown-linux-gnu "$t" -- -max_total_time=30 -rss_limit_mb=2048
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: fuzz-artifacts
+          path: fuzz/artifacts
+
   desktop:
-    name: ${{ matrix.os }} (build, tests)
+    name: ${{ matrix.os }} (clippy, build, tests)
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        include:
+          - { os: macos-latest, artifact: okbeast-macos-arm64, bin: okbeast }
+          - { os: windows-latest, artifact: okbeast-windows-x86_64, bin: okbeast.exe }
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
-        with:
-          ssh-private-key: |
-            ${{ secrets.OK_BR2_CONVERTER_DEPLOY_KEY }}
-            ${{ secrets.OK_BR1_CONVERTER_DEPLOY_KEY }}
-            ${{ secrets.OK_Q3_CONVERTER_DEPLOY_KEY }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           toolchain: stable
+          components: clippy
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo clippy --release --locked --all-targets -- -D warnings
       - run: cargo build --release --locked --bins
       - run: cargo test --release --locked
         env:
           OKB_SAVE_DIR: ${{ runner.temp }}/okb_save
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ matrix.artifact }}
+          path: target/release/${{ matrix.bin }}
+          retention-days: 14

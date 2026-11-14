@@ -30,7 +30,7 @@ audio, input, loading, platform) is ordinary modern code.
   data's `extras/q3dm17/` and `extras/q3dm6/` are still read when the install lacks a map (`assets/extras.rs`,
   [`docs/extra_stage_q3dm17.md`](docs/extra_stage_q3dm17.md), [`docs/extra_stage_q3dm6.md`](docs/extra_stage_q3dm6.md)).
 - **The converter** (the setup screen's CONVERT DISC IMAGE, feature `converter`) is the crate `ok_br2_converter`, its
-  own git repository, a git dependency on a tagged release (`github.com/openkumite/ok_br2_converter`, over SSH; see
+  own git repository, a git dependency on a tagged release (`github.com/openkumite/ok_br2_converter`, public; see
   `CONTRIBUTING.md`, Setup). The same feature brings the crates `ok_br1_converter` (the imported game's disc) and
   `ok_q3_converter` (Quake III Arena's maps for the extra stages), each its own repository, used the same way; a
   converter change reaches the engine as a new tag and a new `tag = ` in `Cargo.toml`. `app/setup/imports.rs` opens their inputs

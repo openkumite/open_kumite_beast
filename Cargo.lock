@@ -2786,7 +2786,7 @@ dependencies = [
 [[package]]
 name = "ok_br1_converter"
 version = "0.1.0"
-source = "git+ssh://git@github.com/openkumite/ok_br1_converter.git?tag=v0.1.0#e2ddb6710b9db39a1a526a1f1ef468e2da89cfee"
+source = "git+https://github.com/openkumite/ok_br1_converter.git?tag=v0.1.0#e2ddb6710b9db39a1a526a1f1ef468e2da89cfee"
 dependencies = [
  "flate2",
  "png",
@@ -2796,7 +2796,7 @@ dependencies = [
 [[package]]
 name = "ok_br2_converter"
 version = "0.1.0"
-source = "git+ssh://git@github.com/openkumite/ok_br2_converter.git?tag=v0.1.0#5663d01786939d8e0714e0238dbd2dd70b6fb50f"
+source = "git+https://github.com/openkumite/ok_br2_converter.git?tag=v0.1.0#5663d01786939d8e0714e0238dbd2dd70b6fb50f"
 dependencies = [
  "chd",
  "libm",
@@ -2805,7 +2805,7 @@ dependencies = [
 [[package]]
 name = "ok_q3_converter"
 version = "0.1.0"
-source = "git+ssh://git@github.com/openkumite/ok_q3_converter.git?tag=v0.1.0#87f778119c5931a4224662a80d28ac596d7c50f5"
+source = "git+https://github.com/openkumite/ok_q3_converter.git?tag=v0.1.0#87f778119c5931a4224662a80d28ac596d7c50f5"
 dependencies = [
  "anyhow",
  "glam 0.34.3",

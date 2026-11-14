@@ -998,6 +998,7 @@ fn v13_head_turn() {
 }
 
 /// The imported game's install next to the engine (`BR1_EXPORT`, else `../okb_export/br1`), None when missing.
+#[cfg(unix)]
 fn br1_export() -> Option<std::path::PathBuf> {
     let root = std::env::var("BR1_EXPORT").unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/../okb_export/br1").into());
     let p = std::path::PathBuf::from(root);
@@ -1024,6 +1025,7 @@ fn without_br1(assets: &crate::assets::Assets, name: &str) -> crate::session::te
 }
 
 /// The v15 fixtures with imported fighters (`record_br1_fixtures`): the direct fights, their scripts, steps.
+#[cfg(unix)]
 const BR1_FIXTURES: [(&str, &str, &str, &str, &str); 2] = [
     (
         "fight_br1_mixed_v15",
@@ -1072,6 +1074,7 @@ fn br1_fixtures_record() {
 
 /// The fight's trace of a fixture of `BR1_FIXTURES`: FNV-1a 64 of the match's bytes (postcard) after every step,
 /// folded, at every 100th step and the last (`fixture frame hash` lines, `fixtures/br1_v15_hashes.txt`).
+#[cfg(unix)]
 fn br1_trace(a: &crate::assets::Assets, name: &str, r: Replay) -> Vec<String> {
     use crate::base::hash::{FNV_BASIS, fnv1a};
     let (mut h, mut out) = (FNV_BASIS, Vec::new());
@@ -1157,6 +1160,7 @@ fn br1_v15_fixtures() {
 /// P1's script. `fight_br1_cpu_v20`: MITSUKO against the imported game's own CPU AI (FOX) on FOX's stage;
 /// `fight_br1_uri00_v20`: a mixed pair on Uriko's stage, URIKO (BR1) pressing ○ until her beast form, against the
 /// main game's CPU (ALICE): her walls shatter into the imported game's debris and drop back (simulation v18's events).
+#[cfg(unix)]
 fn br1_v20_fight(k: usize) -> (&'static str, &'static str, &'static str, &'static str, String) {
     match k {
         0 => (
@@ -1173,9 +1177,11 @@ fn br1_v20_fight(k: usize) -> (&'static str, &'static str, &'static str, &'stati
 /// The v20 ARCADE fixture (`br1_v20_fixtures_record`): ARCADE from the title with the QUICK select, MITSUKO (the
 /// imported row: DOWN × 3), every fight won (P2 at 1 HP once a round fights, `Cheat::OneHp`; P1 □ and × in
 /// turn), to the end of the boss fight against "URIKO (BR1)" on her stage.
+#[cfg(unix)]
 const BR1_ARCADE: &str = "arcade_br1_boss_v20";
 
 /// The session start of the v20 fixtures: a direct fight with P2 the CPU, or ARCADE from the title (`stage` None).
+#[cfg(unix)]
 fn br1_v20_start(id: u32, fight: Option<(&str, &str, &str)>) -> SessionStart {
     match fight {
         Some((p1, p2, stage)) => {
@@ -1564,6 +1570,7 @@ fn team_ffa_fixture() {
 
 /// The imported team battle's fixture (engine addition, T6): a 2 VS 2 on BIG STAGE reached through the menus, at
 /// simulation v24.
+#[cfg(unix)]
 const TEAM_BR1: &str = "team_br1_menus_v24";
 
 /// The pads of `TEAM_BR1`'s session at step `k` (pads 1 / 2, pads 3 / 4), from the title: TEAM BATTLE (DOWN ×6), 2 VS
@@ -1571,6 +1578,7 @@ const TEAM_BR1: &str = "team_br1_menus_v24";
 /// RIGHT) and keeps URIKO for P4, the stage panel's BIG STAGE (LEFT ×2 past RANDOM). In the battle (`frame`: the
 /// battle's frame) P1 opens the pause at 600, CONTROLLER CONFIG. (v24), changes its first button (RIGHT), leaves with
 /// START and closes the pause; then P1 punches, P3 kicks and cycles its target with L2 now and then.
+#[cfg(unix)]
 fn team_br1_pads(k: u32, frame: Option<u64>) -> ([u16; 2], [u16; 2]) {
     use crate::fight::input::pad::{CROSS, DOWN, L2, LEFT, RIGHT, SQUARE, START};
     if let Some(f) = frame {

@@ -581,7 +581,12 @@ mod tests {
         let data = base.join("data");
         assert!(inspect(&base.join("nothing"), &data, Kind::Br2).is_err());
         std::fs::write(base.join("disc.cue"), "FILE").unwrap();
-        assert!(inspect(&base.join("disc.cue"), &data, Kind::Br2).unwrap_err().contains("disc image"));
+        // a disc image: the converter's check, or without it the note that this build has none
+        let err = inspect(&base.join("disc.cue"), &data, Kind::Br2).unwrap_err();
+        #[cfg(feature = "converter")]
+        assert!(err.contains("disc image"), "{err}");
+        #[cfg(not(feature = "converter"))]
+        assert!(err.contains("no converter"), "{err}");
         std::fs::create_dir_all(base.join("empty")).unwrap();
         assert!(inspect(&base.join("empty"), &data, Kind::Br2).unwrap_err().contains("no manifest.json"));
         // an incomplete export: what is missing
