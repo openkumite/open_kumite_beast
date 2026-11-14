@@ -341,6 +341,9 @@ impl ApplicationHandler<UserEvent> for App {
                 self.latch[0] |= key_bit(k);
                 self.latch[1] |= key_bit2(k);
 
+                // Esc quits, as EXIT GAME does; not in the browser, where a page cannot close itself (the stopped
+                // event loop would leave a frozen frame) and Esc is the browser's own key (it leaves fullscreen)
+                #[cfg(not(target_arch = "wasm32"))]
                 if k == KeyCode::Escape {
                     el.exit();
                 }
