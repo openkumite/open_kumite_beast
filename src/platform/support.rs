@@ -94,19 +94,46 @@ fn android_log(level: log::Level, line: &str) {
     }
 }
 
-/// Where the crash and support reports go: the working directory (desktop), the save's folder (Android; made here,
-/// a panic may come before anything was saved).
+/// Writes a crash or support report and returns where it went: the working directory (desktop), else the save's folder
+/// (Android always; desktop when the working directory is not writable: an app started from Finder runs in `/`, one
+/// unpacked under Program Files cannot write its own folder). The folder is made here, a panic may come before
+/// anything was saved.
 #[cfg(not(target_arch = "wasm32"))]
-fn report_path(name: String) -> String {
-    #[cfg(target_os = "android")]
-    let name = {
-        let p = crate::platform::storage::debug_path(&name);
-        if let Some(d) = p.parent() {
-            let _ = std::fs::create_dir_all(d);
+fn write_report(name: String, text: &str) -> Result<String, String> {
+    #[cfg(not(target_os = "android"))]
+    if std::fs::write(&name, text).is_ok() {
+        return Ok(name);
+    }
+    let p = crate::platform::storage::debug_path(&name);
+    if let Some(d) = p.parent() {
+        let _ = std::fs::create_dir_all(d);
+    }
+    let path = p.display().to_string();
+    match std::fs::write(&p, text) {
+        Ok(()) => Ok(path),
+        Err(e) => Err(format!("(could not write {path}: {e})")),
+    }
+}
+
+/// Windows: attaches to the console of the program that started this one (cmd, PowerShell), so that a release build,
+/// which has no console of its own, still prints `--help`, the argument errors, the log and the crash report's path
+/// there; started from Explorer there is none and nothing changes. Output redirected to a file or a pipe needs no
+/// console and is kept. Engine addition; a no-op elsewhere.
+#[allow(unsafe_code)] // Windows: the AttachConsole FFI below (SAFETY note at the call)
+pub fn attach_parent_console() {
+    #[cfg(windows)]
+    {
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn AttachConsole(process_id: u32) -> i32;
         }
-        p.display().to_string()
-    };
-    name
+        const ATTACH_PARENT_PROCESS: u32 = u32::MAX;
+        // SAFETY: AttachConsole takes a process id by value and touches no memory of ours; it fails harmlessly when
+        // the process already has a console or the parent has none
+        unsafe {
+            AttachConsole(ATTACH_PARENT_PROCESS);
+        }
+    }
 }
 
 /// Seconds since the logger started.
@@ -129,8 +156,7 @@ pub fn init(level: &str) {
         let text = format!("PANIC: {info}\n\n{}", report("crash"));
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let path = report_path(format!("okb_crash_{}.txt", stamp()));
-            if std::fs::write(&path, &text).is_ok() {
+            if let Ok(path) = write_report(format!("okb_crash_{}.txt", stamp()), &text) {
                 eprintln!("crash report written to {path}");
             }
         }
@@ -172,17 +198,13 @@ pub fn report(state: &str) -> String {
     s
 }
 
-/// Write the report (desktop: `br2_report_<time>.txt` in the working directory; web: the browser console)
-/// and return where it went.
+/// Write the report (desktop: `okb_report_<time>.txt` in the working directory, else beside the save, `write_report`;
+/// web: the browser console) and return where it went.
 pub fn save_report(state: &str) -> String {
     let text = report(state);
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let path = report_path(format!("okb_report_{}.txt", stamp()));
-        match std::fs::write(&path, &text) {
-            Ok(()) => path,
-            Err(e) => format!("(could not write {path}: {e})"),
-        }
+        write_report(format!("okb_report_{}.txt", stamp()), &text).unwrap_or_else(|e| e)
     }
     #[cfg(target_arch = "wasm32")]
     {

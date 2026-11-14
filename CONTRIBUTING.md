@@ -207,6 +207,42 @@ Seed `fuzz/corpus/<target>/` with real files for faster coverage; corpora and cr
 A `q3_map_parse` seed from the extra stage's files (`f=../okb_export/q3`, `g=$f/baseq3/maps/q3dm17.glb`):
 `{ perl -e 'print pack("V", -s $ARGV[0])' $g; cat $g $f/shaders.json; } > fuzz/corpus/q3_map_parse/q3dm17`.
 
+## Releases
+
+`.github/workflows/release.yml` builds the packages; nothing in them is game data (the player converts their own disc in
+the app).
+
+1. Raise `version` in `Cargo.toml` (and `Cargo.lock`), merge it into `main`.
+2. Run the workflow by hand on that commit (Actions → Release → Run workflow, branch `main`) and wait until every job
+   has passed. `ci.yml` builds only Linux x86_64, the web and Android; a tag whose build fails cannot be moved or
+   deleted, and its version number is used up.
+3. Tag that commit with a signed tag and push it: `git tag -s v0.2.0 -m "OpenKumiteBeast 0.2.0" && git push origin
+   v0.2.0`. Only organisation admins can create `v*` tags, and nobody can move or delete one.
+4. The workflow checks that the tag is `v` + the crate's version, builds every package and opens a **draft** release
+   with them, `SHA256SUMS.txt` and generated notes. Look it over, then publish it.
+
+| package | built on | contents |
+|---|---|---|
+| `okbeast-X.Y.Z-windows-{x86_64,arm64}.zip` | `windows-latest`, `windows-11-arm` | `okbeast.exe` (no console window of its own; started from a terminal it prints there), C runtime linked statically |
+| `okbeast-X.Y.Z-macos-{arm64,x86_64}.zip` | `macos-latest` (x86_64 cross-compiled) | `OpenKumiteBeast.app`, ad-hoc signed |
+| `okbeast-X.Y.Z-linux-{x86_64,arm64}.tar.gz` | `ubuntu-24.04`, `ubuntu-24.04-arm` | `okbeast` (needs glibc 2.39, ALSA, udev) |
+| `okbeast-X.Y.Z-web.zip` | `ubuntu-latest` | the `trunk build` output |
+| `okbeast-X.Y.Z-android.apk` | `ubuntu-latest` | arm64-v8a + x86_64, signed with the release key, `versionCode` = X·10000 + Y·100 + Z; the license texts under `assets/` |
+
+Every package has `LICENSE`, `THIRD_PARTY_NOTICES.md` and `THIRD_PARTY_LICENSES.html` (the APK under `assets/`, through
+`ASSETS` of `android/build.sh`; the license texts, `cargo about generate --features netplay-webrtc about.hbs` with
+cargo-about 0.9.3; `about.toml` accepts the licenses `deny.toml` allows). All builds
+have `netplay-webrtc`. The desktop builds are not code-signed (no Apple Developer ID, no Windows certificate).
+
+The Android release key is a PKCS12 keystore (alias `openkumitebeast`), kept outside every repository; the repository
+secrets `ANDROID_KEYSTORE_BASE64` (the file, base64) and `ANDROID_KEYSTORE_PASSWORD` (store and key) give it to the
+workflow. Keep a backup of both: an app signed with another key cannot update an installed one. `android/build.sh` signs
+with it when `RELEASE_KEYSTORE` is set (see its header), with the debug key otherwise.
+
+Run by hand (Actions → Release → Run workflow), or on a pull request that changes the packaging (the workflow,
+`android/build.sh`, `about.toml`, `about.hbs`, `Cargo.toml`, `Cargo.lock`), the workflow builds the same packages as
+artifacts only, version `X.Y.Z-dev.<commit>` (a pull request's head commit), the APK signed with a debug key.
+
 ## Review process
 
 Every change to the code goes through the review loop before it is committed or merged (project `CLAUDE.md`,

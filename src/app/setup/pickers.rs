@@ -134,6 +134,10 @@ fn helper(file: bool, kind: Kind) -> Option<std::process::Command> {
                 answer = if file { "$d.FileName" } else { "$d.SelectedPath" },
             ),
         ]);
+        // without a console window of its own: a release build has no console to share, and Windows would open one
+        // beside the dialog (the piped answer is unaffected)
+        #[cfg(windows)]
+        std::os::windows::process::CommandExt::creation_flags(&mut c, 0x0800_0000); // CREATE_NO_WINDOW
         return exe.is_file().then_some(c);
     }
     let on_path = |n: &str| std::env::var_os("PATH").is_some_and(|p| std::env::split_paths(&p).any(|d| d.join(n).is_file()));
