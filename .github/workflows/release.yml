@@ -26,6 +26,8 @@ on:
       - Trunk.toml
       - web/**
       - tools/pwa_service_worker.sh
+      - tools/macos_icon.sh
+      - macos/**
 
 permissions:
   contents: read
@@ -142,8 +144,10 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           app="dist/$PKG/OpenKumiteBeast.app"
-          mkdir -p "$app/Contents/MacOS"
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
           cp target/${{ matrix.target }}/release/okbeast "$app/Contents/MacOS/"
+          # the icon (tools/macos_icon.sh renders it from web/icons/icon.svg)
+          cp macos/AppIcon.icns "$app/Contents/Resources/"
           cat > "$app/Contents/Info.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -153,6 +157,7 @@ jobs:
             <key>CFBundleDisplayName</key><string>OpenKumiteBeast</string>
             <key>CFBundleIdentifier</key><string>com.openkumitebeast.game</string>
             <key>CFBundleExecutable</key><string>okbeast</string>
+            <key>CFBundleIconFile</key><string>AppIcon</string>
             <key>CFBundlePackageType</key><string>APPL</string>
             <key>CFBundleShortVersionString</key><string>${VERSION%%-*}</string>
             <key>CFBundleVersion</key><string>${VERSION%%-*}</string>

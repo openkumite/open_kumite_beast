@@ -3,3 +3,4 @@
 android/res/** text eol=lf
 web/icons/*.svg text eol=lf
 web/icons/*.png binary
+macos/*.icns binary

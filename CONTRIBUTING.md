@@ -253,7 +253,9 @@ https://openkumite.github.io/open_kumite_beast/.
   for drafts, not for pushes to `main`); run it by hand with a tag to deploy an earlier release again.
 - `web/manifest.webmanifest` (name, icons, fullscreen landscape) and `web/icons/` are copied into the build by Trunk
   (`index.html`). The icons are drawn by `tests/android_icon.rs` (`web/icons/*.svg`; `OKB_WRITE_ICON=1 cargo test
-  --test android_icon`) and rendered to PNG by `tools/web_icons.sh` (resvg).
+  --test android_icon`) and rendered to PNG by `tools/web_icons.sh` (resvg). The macOS app's icon, `macos/AppIcon.icns`
+  (committed; the release copies it into `OpenKumiteBeast.app`, `CFBundleIconFile`), is rendered from the same
+  `web/icons/icon.svg` by `tools/macos_icon.sh` (resvg, iconutil).
 - `web/sw.js` is the service worker. After each build Trunk runs `tools/pwa_service_worker.sh` (`Trunk.toml`): a
   release build gets the list of every file and a version (a hash of them), so the app starts without a network; a
   debug build (`trunk serve`) gets a worker that caches nothing and removes itself. The hook runs `sh`, so every
