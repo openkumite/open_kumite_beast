@@ -1,0 +1,47 @@
+# The Nix flake (flake.nix, Linux only): it evaluates for both systems and builds, with the tests that run without
+# game data, on x86-64 and arm64. Every push to main (nixpkgs' rustc, pinned by flake.lock, can be older than the stable
+# ci.yml uses), and pull requests that change what it builds from.
+name: Nix
+
+on:
+  pull_request:
+    paths:
+      - flake.nix
+      - flake.lock
+      - Cargo.toml
+      - Cargo.lock
+      - build.rs
+      - 'src/**'
+      - 'tests/**'
+      - 'web/icons/**'
+      - .github/workflows/nix.yml
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: nix build (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - run: nix flake check --all-systems --no-build
+      - run: nix build -L
+      - name: The package
+        run: |
+          ./result/bin/okbeast --help > /dev/null
+          test -f result/share/applications/okbeast.desktop
+          test -f result/share/icons/hicolor/scalable/apps/okbeast.svg

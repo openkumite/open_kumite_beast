@@ -15,3 +15,5 @@ okb_report_*.txt
 *.bmp
 *.tim
 *.webp
+# nix build output
+/result

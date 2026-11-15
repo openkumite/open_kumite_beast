@@ -44,6 +44,25 @@ nothing. Netplay uses the host's choice; a replay plays with the one it was reco
 Netplay (UDP on the desktop, WebRTC rooms in the browser): `okbeast --host 7000` / `okbeast --join HOST:7000`; details in
 [`docs/netplay.md`](docs/netplay.md).
 
+## Nix (Linux)
+
+`flake.nix` builds `okbeast` for x86_64 and aarch64 Linux, with a desktop entry and icon (macOS, Windows, the web and
+Android use the release packages). Flakes must be enabled (`experimental-features = nix-command flakes`). Like every
+build it contains no game data: on first start the setup screen converts your own disc.
+
+```sh
+nix run github:openkumite/open_kumite_beast                 # play without a checkout
+nix profile add github:openkumite/open_kumite_beast         # install okbeast (older Nix: nix profile install)
+nix build                                                   # in a checkout: result/bin/okbeast
+nix develop                                                 # the toolchain and libraries for the checks and the web build
+```
+
+On NixOS, add the flake as an input and put
+`inputs.open_kumite_beast.packages.${pkgs.stdenv.hostPlatform.system}.default` in `environment.systemPackages` (or
+`home.packages`). On other distributions a Nix-built program may not find the system's GPU driver; if the game reports
+no GPU adapter, start it through [nixGL](https://github.com/nix-community/nixGL) (`nixGL okbeast`, or
+`nixVulkanIntel okbeast` / `nixVulkanNvidia okbeast`).
+
 ## License
 
 MIT (see `LICENSE`). Third-party code and its licenses: `THIRD_PARTY_NOTICES.md`.
