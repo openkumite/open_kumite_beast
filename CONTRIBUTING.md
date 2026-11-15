@@ -102,7 +102,11 @@ no game data: on Linux fmt, clippy (default, `--no-default-features`, `netplay-w
 wasm32 clippy (with and without `netplay-webrtc`) and a `trunk build`; the Android clippy and `android/build.sh`;
 `cargo deny` and `cargo audit`; every fuzz target for 30 s; and clippy, a build and the tests on macOS and Windows. Each
 run keeps the builds (Linux, macOS, Windows, web, the Android APK) as artifacts for 14 days. It has no game data,
-so the tests that need it skip themselves: run them locally.
+so the tests that need it skip themselves: run them locally. `.github/workflows/nix.yml` checks the Nix flake
+(`flake.nix`, Linux) on every push to `main` and on pull requests that change the flake, Cargo files, `build.rs`,
+`src/`, `tests/` or `web/icons/`: `nix flake check` for both systems and `nix build` (with the tests, on nixpkgs'
+rustc, which can be older than the stable the CI uses) on x86_64 and arm64. `flake.lock` pins nixpkgs; `nix flake
+update` moves it (Dependabot does not).
 
 `unsafe` is denied crate-wide (`[lints.rust] unsafe_code = "deny"` in `Cargo.toml`). The only allowed sites are the
 platform boundary (`platform/android.rs`, the FFI in `platform/support.rs`, the Android entry in `lib.rs`) and the
