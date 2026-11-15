@@ -170,7 +170,7 @@ comes from the stored preferences). Design, options and checks: [`docs/replay_vi
 shots of the team battle and TEAM ARCADE (`sim SHOTS`, `fetest FESHOTS`) and the app's screenshots (fights and menus, each app route with its own `OKB_SAVE_DIR`);
 `compare.sh` compares two runs byte for byte and prints the count (`PASS: N files identical (M screenshots)`; on
 2026-11-07, golden of SIM_VERSION 25: 241 files, 136 screenshots; with TEAM ARCADE's six routes, A5, SIM_VERSION 26:
-283 files, 160 screenshots; `fe_team_arcade_br1` reads the imported game's data from `../okb_export/br1`). The routes are listed in
+283 files, 160 screenshots; re-recorded 2026-11-15 for SIM_VERSION 27 (the spring chains; the earlier one kept as `golden_pre_spring_v27`), the same counts; `fe_team_arcade_br1` reads the imported game's data from `../okb_export/br1`). The routes are listed in
 `../.research/refactor_baseline/README.md`. It builds nothing and runs `open_kumite_beast/target/release/*` of the project root (a worktree: run a copy of the
 script with its `ENGINE=` line pointed at the worktree). Keep the window visible while the app routes run.
 
