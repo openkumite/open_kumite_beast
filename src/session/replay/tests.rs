@@ -508,6 +508,45 @@ fn v5_fights_still_play() {
     }
 }
 
+/// A v26 fight of the two the spring chains' rest frame (v27) changes most, Alice (her beast form's ears) and Shina
+/// (her hair, human and beast), still plays in sync, and its chains still move as the earlier model moves them:
+/// FNV-1a over every frame's `spring_aims` (the sync hash a later build compares holds no spring state). The same
+/// inputs at v27 move them differently, so the pin covers the chains.
+#[test]
+fn v26_springs_still_play() {
+    let Some(assets) = export() else {
+        eprintln!("skipped: no okb_export");
+        return;
+    };
+    let run = |v: u32| {
+        let mut r = Replay::decode(include_bytes!("../fixtures/springs_v26.okbr")).expect("decodes");
+        assert_eq!(r.sim_version, 26);
+        if v != r.sim_version {
+            (r.sim_version, r.body.checks) = (v, Vec::new());
+        }
+        let (mut h, mut springs) = (0xCBF2_9CE4_8422_2325u64, [0usize; 2]);
+        let sum = simulate(&assets, r, |s| {
+            let Some(g) = &s.fight else { return };
+            for (f, n) in g.m.fighters.iter().zip(&mut springs) {
+                for (node, d) in &f.spring_aims {
+                    let words = [*node as u32].into_iter().chain(d.to_array().map(f32::to_bits));
+                    h = words.flat_map(u32::to_le_bytes).fold(h, |h, b| (h ^ b as u64).wrapping_mul(0x0000_0100_0000_01B3));
+                }
+                *n += f.spring_aims.len();
+            }
+        })
+        .expect("in sync");
+        assert_eq!(sum.frames, 906);
+        assert!(springs.iter().all(|&n| n > 0), "springs {springs:?}");
+        eprintln!("springs v{v}: {h:#018X}");
+        (sum, h)
+    };
+    let (sum, v26) = run(26);
+    assert!(sum.checks >= 15);
+    assert_eq!(v26, 0xA525A7B9F30DCC35, "the v26 spring chains changed");
+    assert_ne!(run(SIM_VERSION).1, v26);
+}
+
 /// The ST5 fight of `v5_fights_still_play` run at the current version: the stage routine's counter W.28
 /// (+0x14 per drawn frame) restarts at the second round, stands still while the Beast Drive darkening is at 255
 /// and on the round-start and match-end frames, goes back with the KO replay's snapshot, and the match end

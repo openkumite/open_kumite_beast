@@ -82,8 +82,9 @@ pub(crate) fn skeleton_parts(f: &mut Fighter, model: &ModelData, nodes: &[[i32; 
 /// lock (the offset keeping the pelvis in place on screen, then blending out with the animation), then the spring
 /// chains (extra nodes of type 2: hair, tails) following the animated skeleton `nodes` / `rots`, `extras` its extra nodes
 /// by form; their aims from world (game units, y down) into the glTF skeleton's model space, `portable` (simulation
-/// version 3 on, `Loaded::portable`) by `portable::transform`.
-pub(crate) fn skeleton_tail(f: &mut Fighter, extras: &[Vec<ExtraNode>; 2], nodes: &[[i32; 3]], rots: &[[[i32; 3]; 3]], portable: bool) {
+/// version 3 on, `Loaded::portable`) by `portable::transform`; `rest`: the chains' rest frame of simulation version 27
+/// (`v::SPRING_REST`).
+pub(crate) fn skeleton_tail(f: &mut Fighter, extras: &[Vec<ExtraNode>; 2], nodes: &[[i32; 3]], rots: &[[[i32; 3]; 3]], portable: bool, rest: bool) {
     // op 07.03: keep the pelvis in place on screen, then let the offset blend out with the animation
     if let Some(h) = f.pelvis_lock.take() {
         f.draw_off = [0, 1, 2].map(|k| (h[k] - f.hips[k]) as f32);
@@ -98,7 +99,7 @@ pub(crate) fn skeleton_tail(f: &mut Fighter, extras: &[Vec<ExtraNode>; 2], nodes
         f.springs.clear();
         f.spring_form = form;
     }
-    let aims = crate::fight::anim::spring::step(&mut f.springs, &extras[form as usize], nodes, rots, f.o_94 as i32, false, portable);
+    let aims = crate::fight::anim::spring::step(&mut f.springs, &extras[form as usize], nodes, rots, f.o_94 as i32, false, portable, rest);
     // world (game units, y down) → model space of the glTF skeleton
     f.spring_aims = if portable {
         let inv = crate::base::portable::transform(f.m_t, f.yaw).inverse();

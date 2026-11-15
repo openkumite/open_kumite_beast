@@ -308,7 +308,7 @@ impl TeamFight {
         }
         // (the team battle is simulation v22 on: always the portable path)
         for i in (0..N).filter(|&i| !br1[i]) {
-            duel::frame::skeleton_tail(&mut self.fighters[i], &data.fighters[i].extras, &nodes[i], &rots[i], true);
+            duel::frame::skeleton_tail(&mut self.fighters[i], &data.fighters[i].extras, &nodes[i], &rots[i], true, data.gates().spring_rest);
         }
         nodes
     }

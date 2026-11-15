@@ -113,7 +113,7 @@ the recipe is in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#7-a-simulation-change
   | v22 (the team battle) | `team_ffa_v22.okbr` (FORMAT 2) with `team_ffa_v22_hashes.txt`; the state-hash trace `team_v22_hashes.txt` |
   | v23 (the team battle's imported fighters) | the state-hash trace `team_br1_v23_hashes.txt` |
   | v24 (the team battle's menus with the imported game) | `team_br1_menus_v24.okbr` with `team_br1_menus_v24_hashes.txt` |
-  | v26 (TEAM ARCADE) | `team_arcade_v26.okbr` (the menus, a continue, a retry won) with `team_arcade_v26_br2r_hashes.txt`; the state-hash trace `team_arcade_v26_hashes.txt` |
+  | v26 (TEAM ARCADE; the spring chains before v27) | `team_arcade_v26.okbr` (the menus, a continue, a retry won) with `team_arcade_v26_br2r_hashes.txt`; the state-hash trace `team_arcade_v26_hashes.txt`; `springs_v26` (ALI v MAR with the beast change: the earlier chain model, its `spring_aims` hash pinned) |
 
   The traces (`*_hashes.txt`) hash the fight's or the team battle's postcard bytes at fixed steps; their record
   tests are named in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#8-touching-the-fight-frame-or-a-per-player-resource).
