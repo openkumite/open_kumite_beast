@@ -8,6 +8,12 @@ pub const BR1_PREFIX: &str = "br1/";
 /// The static tables' file in a converted export (`Assets::tables`; the imported game's install has its own).
 pub const TABLES: &str = "engine/tables.okt";
 
+/// The continue screens' pictures as the logic asks for them (the disc's CON folder) and where a converter from
+/// version 0.1.1 writes them: "con" is a reserved device name on Windows (Windows 10 refuses a folder of that name,
+/// os error 267). `Assets::load` reads the new folder first and the old one for data converted before.
+const CONTINUE_ASKED: &str = "engine/con/";
+const CONTINUE_DIR: &str = "engine/continue/";
+
 #[derive(Clone)]
 pub struct Assets {
     #[cfg(not(target_arch = "wasm32"))]
@@ -122,13 +128,24 @@ impl Assets {
         self.opfs.is_none().then(|| Self::new(format!("{}{dir}/", self.base)))
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    /// A file of the data by its name in the export; a continue picture from `CONTINUE_DIR`, else (data converted
+    /// before converter 0.1.1) from the folder the logic names.
     pub async fn load(&self, rel: &str) -> Result<Vec<u8>, String> {
+        let Some(name) = rel.strip_prefix(CONTINUE_ASKED) else { return self.load_file(rel).await };
+        match self.load_file(&format!("{CONTINUE_DIR}{name}")).await {
+            Ok(b) => Ok(b),
+            // neither: the new folder's error first (data from converter 0.1.1 on has no old folder)
+            Err(new) => self.load_file(rel).await.map_err(|old| format!("{new}; {old}")),
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    async fn load_file(&self, rel: &str) -> Result<Vec<u8>, String> {
         std::fs::read(self.root.join(rel)).map_err(|e| format!("{}: {e}", self.root.join(rel).display()))
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub async fn load(&self, rel: &str) -> Result<Vec<u8>, String> {
+    async fn load_file(&self, rel: &str) -> Result<Vec<u8>, String> {
         use wasm_bindgen::JsCast;
         if let Some(dir) = &self.opfs {
             return crate::platform::game_data::web::read(dir, rel).await;
@@ -339,5 +356,30 @@ mod tests {
         write("", Elem::U8, true);
         assert!(br1().unwrap_err().contains("blob"));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod continue_tests {
+    use super::Assets;
+
+    /// A continue picture asked for by its disc folder (`engine/con/`) is read from `engine/continue/` (converter 0.1.1
+    /// on: "con" is reserved on Windows), else from `engine/con/` (data converted before); other names as they are.
+    #[test]
+    fn continue_pictures_from_the_new_folder_or_the_old() {
+        let root = std::env::temp_dir().join(format!("okb_assets_continue_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        for (dir, name, body) in [("continue", "YUGCON.DAT", "new"), ("con", "ALICON.DAT", "old"), ("con", "YUGCON.DAT", "stale")] {
+            std::fs::create_dir_all(root.join("engine").join(dir)).unwrap();
+            std::fs::write(root.join("engine").join(dir).join(name), body).unwrap();
+        }
+        let a = Assets::new(&root);
+        let load = |rel: &str| pollster::block_on(a.load(rel));
+        assert_eq!(load("engine/con/YUGCON.DAT").unwrap(), b"new");
+        assert_eq!(load("engine/con/ALICON.DAT").unwrap(), b"old");
+        let e = load("engine/con/LONCON.DAT").unwrap_err();
+        assert!(e.find("continue").is_some_and(|i| e.find("con/").is_some_and(|j| i < j)), "the new folder named first: {e}");
+        assert_eq!(load("engine/continue/YUGCON.DAT").unwrap(), b"new");
+        std::fs::remove_dir_all(&root).unwrap();
     }
 }

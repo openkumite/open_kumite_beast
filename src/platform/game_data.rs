@@ -85,7 +85,7 @@ impl Dirs {
     /// The optional installs in the replaced data folder `old` (`CARRIED`) moved into the new one (a main-game
     /// install keeps them; nothing for one the new folder has itself, nothing for an optional install's own `Dirs`).
     /// False: a move failed, `old` must stay for the next `recover` to try again.
-    fn carry(&self) -> bool {
+    fn carry(&self, waits_ms: &[u64]) -> bool {
         if !self.holds_extras {
             return true;
         }
@@ -93,7 +93,7 @@ impl Dirs {
         for name in CARRIED {
             let (from, to) = (self.old.join(name), self.root.join(name));
             if from.is_dir() && self.root.is_dir() && !to.exists() {
-                match rename_retried(&from, &to) {
+                match rename_retried_with(&from, &to, waits_ms, std::thread::sleep) {
                     Ok(()) => log::info!("game data: {name} kept in {}", to.display()),
                     Err(e) => {
                         log::warn!("game data: {name} could not be kept yet ({e}): {} left for the next start", self.old.display());
@@ -153,7 +153,8 @@ impl Dirs {
         }
         // a swap cut before its optional installs were carried over (or a carry that failed): `.old` kept while it
         // still holds one
-        let carried = self.carry();
+        // at the start, before the window: the short waits (the next start tries again)
+        let carried = self.carry(&START_WAITS);
         for d in [&self.part, &self.old, &self.del] {
             if d.exists() && (carried || d != &self.old) {
                 match std::fs::remove_dir_all(d) {
@@ -176,7 +177,7 @@ impl Dirs {
     pub fn install(&self) -> std::io::Result<()> {
         if self.old.exists() {
             // a carry that failed before: tried again, the install refused while `.old` still holds the data
-            if !self.carry() {
+            if !self.carry(&RENAME_WAITS) {
                 return Err(std::io::Error::other("the Bloody Roar 1 or Quake III data of the replaced game data could not be moved: try again"));
             }
             std::fs::remove_dir_all(&self.old)?;
@@ -193,7 +194,7 @@ impl Dirs {
         }
         // the old data deleted once its optional installs are out of it (else `recover` carries them at the next start)
         if had
-            && self.carry()
+            && self.carry(&RENAME_WAITS)
             && let Err(e) = std::fs::remove_dir_all(&self.old)
         {
             log::warn!("game data: could not remove {}: {e}", self.old.display());
@@ -211,18 +212,44 @@ impl Dirs {
     }
 }
 
-/// A folder renamed, tried a few times over a second: on Windows a virus scanner or the indexer often still holds
-/// one of the files just written ("Access is denied").
+/// A folder renamed, tried again for about half a minute while it is refused: on Windows a virus scanner or the
+/// indexer often still holds some of the files just written ("Access is denied"), and scanning a conversion's ~500
+/// files takes far longer than a second (an install over earlier data failed after five tries in one second).
 #[cfg(not(target_arch = "wasm32"))]
 fn rename_retried(from: &Path, to: &Path) -> std::io::Result<()> {
-    let mut tries = 0;
+    rename_retried_with(from, to, &RENAME_WAITS, std::thread::sleep)
+}
+
+/// `recover`'s pauses at the start, before the window opens: about a second, as a start must not hang on a folder
+/// another program holds (the next start tries again).
+#[cfg(not(target_arch = "wasm32"))]
+const START_WAITS: [u64; 5] = [200; 5];
+
+/// The pauses between `rename_retried`'s tries: short first, then a second each (≈ 31 s in all).
+#[cfg(not(target_arch = "wasm32"))]
+const RENAME_WAITS: [u64; 34] = {
+    let mut w = [1000; 34];
+    let first = [100, 200, 300, 400];
+    let mut i = 0;
+    while i < first.len() {
+        w[i] = first[i];
+        i += 1;
+    }
+    w
+};
+
+#[cfg(not(target_arch = "wasm32"))]
+fn rename_retried_with(from: &Path, to: &Path, waits_ms: &[u64], sleep: impl Fn(std::time::Duration)) -> std::io::Result<()> {
+    let mut waits = waits_ms.iter();
     loop {
         match std::fs::rename(from, to) {
-            Err(e) if tries < 5 && e.kind() == std::io::ErrorKind::PermissionDenied => {
-                tries += 1;
-                log::warn!("game data: renaming {}: {e}; again", from.display());
-                std::thread::sleep(std::time::Duration::from_millis(200));
-            }
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => match waits.next() {
+                Some(&ms) => {
+                    log::warn!("game data: renaming {}: {e}; again", from.display());
+                    sleep(std::time::Duration::from_millis(ms));
+                }
+                None => return Err(e),
+            },
             r => return r,
         }
     }
@@ -482,7 +509,24 @@ pub mod web {
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
-    use super::{Dirs, next_slot_dir};
+    use super::{Dirs, RENAME_WAITS, next_slot_dir, rename_retried_with};
+
+    /// The renames wait about half a minute in all for a scanner to let go, short pauses first; a refusal other than
+    /// "access denied" (here: the source missing) is returned at once, without a pause.
+    #[test]
+    fn renames_wait_for_a_scanner_but_not_for_other_errors() {
+        let total: u64 = RENAME_WAITS.iter().sum();
+        assert!((25_000..=40_000).contains(&total), "{total} ms");
+        assert!(RENAME_WAITS[0] <= 200 && RENAME_WAITS.windows(2).all(|w| w[0] <= w[1]));
+        let d = temp("rename_missing");
+        let slept = std::cell::Cell::new(0u32);
+        let r = rename_retried_with(&d.join("absent"), &d.join("to"), &RENAME_WAITS, |_| slept.set(slept.get() + 1));
+        assert_eq!((r.map_err(|e| e.kind()), slept.get()), (Err(std::io::ErrorKind::NotFound), 0));
+        std::fs::create_dir_all(d.join("from")).unwrap();
+        rename_retried_with(&d.join("from"), &d.join("to"), &RENAME_WAITS, |_| slept.set(slept.get() + 1)).unwrap();
+        assert!(d.join("to").is_dir() && slept.get() == 0);
+        std::fs::remove_dir_all(&d).unwrap();
+    }
 
     #[test]
     fn next_slot_dir_skips_the_kept_replaced_folder() {
