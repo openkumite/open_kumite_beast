@@ -36,9 +36,11 @@ fn v3_skeleton_bits() {
         eprintln!("skipped: no okb_export");
         return;
     };
-    // v12: the skeleton before the head turn; v13 on: node 2 and its children turned (`move_script::head_turn`)
+    // v12: the skeleton before the head turn; v13 on: node 2 and its children turned (`move_script::head_turn`);
+    // v27 on: the spring chains' rest frame (`fight::anim::spring`)
     assert_eq!(skeleton_bits(&assets, 12), 0x6FA9D28EE88B139A, "the v3 skeleton changed");
-    assert_eq!(skeleton_bits(&assets, SIM_VERSION), 0x72F8DBD4BCC8A214, "the v13 skeleton changed");
+    assert_eq!(skeleton_bits(&assets, 26), 0x72F8DBD4BCC8A214, "the v13 skeleton changed");
+    assert_eq!(skeleton_bits(&assets, SIM_VERSION), 0xEBC1E2D0C0FF4E1E, "the v27 skeleton changed");
 }
 
 /// The hash of `v3_skeleton_bits`'s fight at simulation version `v`.

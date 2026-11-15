@@ -105,7 +105,11 @@
 /// v26: TEAM ARCADE (engine addition, `v::TEAM_ARCADE`): two players on one team through a
 /// ladder of 2 VS 2 battles against CPU pairs, entered by a third row of the team battle's mode choice; every
 /// session before it, and every match and team battle of v26 outside the new mode, run as before.
-pub const SIM_VERSION: u32 = 26;
+/// v27: the spring chains (hair, ears, tails) as the game steps them (`v::SPRING_REST`, `fight::anim::spring`): a
+/// link's rest frame is aimed at its descriptor's direction, its swing is limited there (±p5, not twice that, and not
+/// around the animated direction), the direction is not pushed by it every frame, and a link follows its parent link's
+/// stepped rotation; every session before v27 keeps the earlier model.
+pub const SIM_VERSION: u32 = 27;
 
 /// The first simulation version of each rule (the changelog on `SIM_VERSION`), named for the rule. Two rules of one
 /// version are two constants.
@@ -200,6 +204,8 @@ pub mod v {
     pub const CHAMFERS: u32 = 25;
     /// TEAM ARCADE: the team battle's co-op ladder against CPU pairs (`frontend::team_arcade`).
     pub const TEAM_ARCADE: u32 = 26;
+    /// the spring chains' rest frame and swing limits as the game's chain step (`fight::anim::spring::step`).
+    pub const SPRING_REST: u32 = 27;
 }
 
 /// The rules of one simulation version (`Gates::of`): a flag per rule of `v` (the same name, lower case), methods for
@@ -247,6 +253,7 @@ pub struct Gates {
     pub posed_inside: bool,
     pub chamfers: bool,
     pub team_arcade: bool,
+    pub spring_rest: bool,
 }
 
 impl Gates {
@@ -293,6 +300,7 @@ impl Gates {
             posed_inside: ver >= v::POSED_INSIDE,
             chamfers: ver >= v::CHAMFERS,
             team_arcade: ver >= v::TEAM_ARCADE,
+            spring_rest: ver >= v::SPRING_REST,
         }
     }
 
@@ -343,9 +351,10 @@ v23: team_br1 team_big_stages
 v24: team_config sudden_death_draw
 v25: team_walls draw_game br1_launch br1_wall_radius thrown_lock posed_inside chamfers
 v26: team_arcade
+v27: spring_rest
 ";
 
-    fn flags(g: Gates) -> [(&'static str, bool); 39] {
+    fn flags(g: Gates) -> [(&'static str, bool); 40] {
         [
             ("replay_row", g.replay_row),
             ("portable_math", g.portable_math),
@@ -386,6 +395,7 @@ v26: team_arcade
             ("posed_inside", g.posed_inside),
             ("chamfers", g.chamfers),
             ("team_arcade", g.team_arcade),
+            ("spring_rest", g.spring_rest),
         ]
     }
 

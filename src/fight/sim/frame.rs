@@ -364,7 +364,7 @@ impl Match {
         // op 07.03's pelvis lock, the spring chains (extra nodes of type 2)
         for i in 0..2 {
             if !self.is_br1(i) {
-                duel::frame::skeleton_tail(&mut self.fighters[i], &data.fighters[i].extras, &nodes[i], &rots[i], data.portable());
+                duel::frame::skeleton_tail(&mut self.fighters[i], &data.fighters[i].extras, &nodes[i], &rots[i], data.portable(), data.gates().spring_rest);
             }
         }
         nodes
